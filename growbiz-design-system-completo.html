@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>GrowBiz — Design System</title>
+<style>
+  :root{
+    --bg-0:#0b0f1a;
+    --panel: rgba(255,255,255,0.06);
+    --panel-2: rgba(255,255,255,0.04);
+    --panel-border: rgba(255,255,255,0.10);
+    --blue-1:#2f7dfa;
+    --blue-2:#5ac8ff;
+    --text-hi:#f4f6fb;
+    --text-lo:#9aa4bb;
+    --radius-lg:28px;
+    --radius-md:18px;
+    --radius-sm:12px;
+    --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:var(--font);
+    background:
+      radial-gradient(circle at 15% 10%, rgba(47,125,250,0.18), transparent 40%),
+      radial-gradient(circle at 85% 90%, rgba(90,200,255,0.12), transparent 45%),
+      var(--bg-0);
+    color:var(--text-hi);
+    min-height:100vh;
+  }
+  .wrap{max-width:1180px; margin:0 auto; padding:36px 32px 60px;}
+  h1{font-size:26px; margin:0 0 4px;}
+  .sub{color:var(--text-lo); margin:0 0 26px; font-size:14px;}
+
+  /* Tabs */
+  .tabs{display:flex; gap:8px; margin-bottom:30px; flex-wrap:wrap;}
+  .tab{
+    padding:10px 18px; border-radius:999px; font-size:13px; font-weight:600;
+    background:var(--panel-2); border:1px solid var(--panel-border);
+    color:var(--text-lo); cursor:pointer; transition:.15s;
+  }
+  .tab.active{
+    background:linear-gradient(135deg,var(--blue-1),var(--blue-2));
+    color:#fff; border-color:transparent;
+  }
+
+  .screen{display:none;}
+  .screen.active{display:block;}
+
+  .panel{
+    background:rgba(255,255,255,0.03);
+    border:1px solid var(--panel-border);
+    border-radius:var(--radius-lg);
+    padding:28px;
+  }
+
+  /* --- Onboarding --- */
+  .progress{display:flex; gap:6px; margin-bottom:22px;}
+  .dot{height:5px; flex:1; border-radius:4px; background:var(--panel-border);}
+  .dot.done{background:linear-gradient(90deg,var(--blue-1),var(--blue-2));}
+  .q-label{font-size:12px; color:var(--text-lo); text-transform:uppercase; letter-spacing:.06em; margin-bottom:8px;}
+  .q-title{font-size:20px; margin:0 0 22px; max-width:480px; line-height:1.4;}
+  .options{display:grid; grid-template-columns:1fr 1fr; gap:12px; max-width:520px;}
+  .option{
+    padding:14px 16px; border-radius:var(--radius-sm);
+    background:var(--panel); border:1px solid var(--panel-border);
+    font-size:13.5px; cursor:pointer;
+  }
+  .option.selected{
+    border-color:var(--blue-2);
+    background:linear-gradient(135deg, rgba(47,125,250,0.25), rgba(90,200,255,0.15));
+  }
+  .nav-row{display:flex; justify-content:space-between; margin-top:28px; max-width:520px;}
+
+  /* --- Proposta de campanhas --- */
+  .grid-cards{display:grid; grid-template-columns:repeat(3,1fr); gap:18px;}
+  .prop-card{
+    background:var(--panel); border:1px solid var(--panel-border);
+    border-radius:var(--radius-md); padding:18px;
+  }
+  .prop-card .plat{
+    display:inline-block; font-size:11px; padding:4px 10px; border-radius:999px;
+    background:linear-gradient(135deg,var(--blue-1),var(--blue-2));
+    color:#fff; font-weight:600; margin-bottom:12px;
+  }
+  .prop-card h4{margin:0 0 6px; font-size:15px;}
+  .prop-card p{margin:0 0 16px; font-size:12.5px; color:var(--text-lo); line-height:1.5;}
+  .score{font-size:12px; color:var(--blue-2); font-weight:700; margin-bottom:14px;}
+
+  /* --- Kanban --- */
+  .board{display:grid; grid-template-columns:repeat(3, 1fr); gap:22px;}
+  .column h3{font-size:13px; letter-spacing:.06em; text-transform:uppercase; color:var(--text-lo); margin:4px 8px 16px;}
+  .card{
+    background:var(--panel); border:1px solid var(--panel-border);
+    backdrop-filter: blur(14px); border-radius:var(--radius-md);
+    padding:16px; margin-bottom:14px; box-shadow:0 8px 24px rgba(0,0,0,0.25);
+  }
+  .card .plat{
+    display:inline-block; font-size:11px; padding:4px 10px; border-radius:999px;
+    background:linear-gradient(135deg,var(--blue-1),var(--blue-2));
+    color:#fff; font-weight:600; margin-bottom:10px;
+  }
+  .card h4{margin:0 0 6px; font-size:15px;}
+  .card p{margin:0 0 14px; font-size:12.5px; color:var(--text-lo); line-height:1.5;}
+  .card .meta{display:flex; justify-content:space-between; align-items:center;}
+  .card .price{color:var(--blue-2); font-weight:700; font-size:14px;}
+
+  .btn{
+    border:none; border-radius:999px; padding:9px 18px; font-size:12.5px; font-weight:600;
+    background:linear-gradient(135deg,var(--blue-1),var(--blue-2)); color:#fff; cursor:pointer;
+  }
+  .btn.ghost{background:rgba(255,255,255,0.08); color:var(--text-hi);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>GrowBiz — Design System</h1>
+  <p class="sub">Mesmo sistema visual aplicado às três telas principais do app</p>
+
+  <div class="tabs">
+    <div class="tab active" data-target="s1">1. Onboarding (7 perguntas)</div>
+    <div class="tab" data-target="s2">2. Proposta de campanhas</div>
+    <div class="tab" data-target="s3">3. Kanban de acompanhamento</div>
+  </div>
+
+  <!-- SCREEN 1: Onboarding -->
+  <div class="screen active" id="s1">
+    <div class="panel">
+      <div class="progress">
+        <div class="dot done"></div><div class="dot done"></div><div class="dot done"></div>
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
+      </div>
+      <div class="q-label">Pergunta 3 de 7</div>
+      <p class="q-title">Qual é o principal objetivo da sua próxima campanha?</p>
+      <div class="options">
+        <div class="option selected">Aumentar vendas</div>
+        <div class="option">Ganhar seguidores</div>
+        <div class="option">Divulgar lançamento</div>
+        <div class="option">Fidelizar clientes</div>
+      </div>
+      <div class="nav-row">
+        <button class="btn ghost">Voltar</button>
+        <button class="btn">Próxima</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN 2: Proposta de campanhas -->
+  <div class="screen" id="s2">
+    <div class="panel">
+      <div class="q-label">Com base no seu perfil</div>
+      <p class="q-title" style="margin-bottom:22px;">3 campanhas sugeridas para você</p>
+      <div class="grid-cards">
+        <div class="prop-card">
+          <span class="plat">Instagram</span>
+          <h4>Carrossel — Prova social</h4>
+          <p>Depoimentos de clientes + antes/depois, foco em conversão.</p>
+          <div class="score">92% de aderência ao seu perfil</div>
+          <button class="btn" style="width:100%;">Adicionar ao kanban</button>
+        </div>
+        <div class="prop-card">
+          <span class="plat">TikTok</span>
+          <h4>Vídeo — bastidores</h4>
+          <p>Formato vertical curto, tom autêntico, cta para link na bio.</p>
+          <div class="score">85% de aderência ao seu perfil</div>
+          <button class="btn ghost" style="width:100%;">Adicionar ao kanban</button>
+        </div>
+        <div class="prop-card">
+          <span class="plat">Facebook</span>
+          <h4>Anúncio — Remarketing</h4>
+          <p>Reengaja visitantes recentes com oferta segmentada.</p>
+          <div class="score">78% de aderência ao seu perfil</div>
+          <button class="btn ghost" style="width:100%;">Adicionar ao kanban</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN 3: Kanban -->
+  <div class="screen" id="s3">
+    <div class="board">
+      <div class="column">
+        <h3>Planejadas</h3>
+        <div class="card">
+          <span class="plat">Instagram</span>
+          <h4>Promoção Dia das Mães</h4>
+          <p>Carrossel + stories, foco em ticket médio, público 25-40 anos.</p>
+          <div class="meta"><span class="price">R$ 350 / mês</span><button class="btn ghost">Ver</button></div>
+        </div>
+        <div class="card">
+          <span class="plat">TikTok</span>
+          <h4>Vídeo curto — bastidores</h4>
+          <p>Formato vertical, tom descontraído, cta para catálogo.</p>
+          <div class="meta"><span class="price">R$ 180 / mês</span><button class="btn ghost">Ver</button></div>
+        </div>
+      </div>
+      <div class="column">
+        <h3>Em andamento</h3>
+        <div class="card">
+          <span class="plat">Facebook</span>
+          <h4>Campanha de reengajamento</h4>
+          <p>Segmentação de carrinho abandonado, 3 criativos em teste A/B.</p>
+          <div class="meta"><span class="price">R$ 420 / mês</span><button class="btn">Editar</button></div>
+        </div>
+      </div>
+      <div class="column">
+        <h3>Concluídas</h3>
+        <div class="card">
+          <span class="plat">Instagram</span>
+          <h4>Lançamento coleção inverno</h4>
+          <p>Resultado: +18% de alcance orgânico, 240 novos seguidores.</p>
+          <div class="meta"><span class="price">Fechada</span><button class="btn ghost">Relatório</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  document.querySelectorAll('.tab').forEach(tab=>{
+    tab.addEventListener('click', ()=>{
+      document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+      document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById(tab.dataset.target).classList.add('active');
+    });
+  });
+  document.querySelectorAll('.option').forEach(opt=>{
+    opt.addEventListener('click', ()=>{
+      opt.parentElement.querySelectorAll('.option').forEach(o=>o.classList.remove('selected'));
+      opt.classList.add('selected');
+    });
+  });
+</script>
+</body>
+</html>

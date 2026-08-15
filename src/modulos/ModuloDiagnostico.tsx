@@ -1,0 +1,280 @@
+import React, { useState, useEffect } from 'react';
+import { PerfilUsuario, ModeloOperacional, EscopoGeografico, DiagnosticoCompleto, RespostasFiltroSetePerguntas } from '../tipos';
+import { OBTER_SETE_PERGUNTAS_ESTRATEGICAS, DETERMINAR_MATRIZ_DECISAO, CRIAR_DIAGNOSTICO_COMPLETO } from '../servicos/servicoDiagnostico';
+import { Brain, Sparkles, CheckCircle2, ChevronRight, ArrowRight } from 'lucide-react';
+
+interface PropriedadesDiagnostico {
+  usuario: PerfilUsuario;
+  aoConcluirDiagnostico: (diagnostico: DiagnosticoCompleto) => void;
+}
+
+export const ModuloDiagnostico: React.FC<PropriedadesDiagnostico> = ({ usuario, aoConcluirDiagnostico }) => {
+  // Dados do Input Inicial
+  const [nomeNegocio, setNomeNegocio] = useState<string>(usuario.nomeEmpresaOuUsuario || '');
+  const [setor, setSetor] = useState<string>(usuario.setor || 'Cafeteria e Varejo');
+  const [modeloOperacional, setModeloOperacional] = useState<ModeloOperacional>(usuario.modeloOperacional || 'Presencial');
+  const [escopoGeografico, setEscopoGeografico] = useState<EscopoGeografico>(usuario.escopoGeografico || 'Local');
+
+  // Estado das respostas das 7 perguntas
+  const [respostasFiltro, setRespostasFiltro] = useState<RespostasFiltroSetePerguntas>({
+    1: 'imediato',
+    2: 'desejo_imediato',
+    3: 'ticket_baixo',
+    4: 'local_mapa',
+    5: 'commoditizado_alta_demanda',
+    6: 'alta_escala',
+    7: 'giro_rapido'
+  });
+
+  const [perguntaAtualIdx, setPerguntaAtualIdx] = useState<number>(0);
+  const perguntasList = OBTER_SETE_PERGUNTAS_ESTRATEGICAS(setor);
+
+  // Previsão da Matriz de Decisão ao vivo
+  const [matrizPrevia, setMatrizPrevia] = useState<{ tipo: 'RAPIDA' | 'ELABORADA'; justificativa: string }>({
+    tipo: 'RAPIDA',
+    justificativa: ''
+  });
+
+  useEffect(() => {
+    const previa = DETERMINAR_MATRIZ_DECISAO(setor, respostasFiltro);
+    setMatrizPrevia(previa);
+  }, [setor, respostasFiltro]);
+
+  const selecionarOpcao = (perguntaId: number, valor: string) => {
+    setRespostasFiltro(prev => ({ ...prev, [perguntaId]: valor }));
+    if (perguntaAtualIdx < perguntasList.length - 1) {
+      setPerguntaAtualIdx(prev => prev + 1);
+    }
+  };
+
+  const submitDiagnostico = (e: React.FormEvent) => {
+    e.preventDefault();
+    const diagnosticoFinal = CRIAR_DIAGNOSTICO_COMPLETO(
+      nomeNegocio,
+      setor,
+      modeloOperacional,
+      escopoGeografico,
+      respostasFiltro
+    );
+    aoConcluirDiagnostico(diagnosticoFinal);
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto py-8 px-4 text-white">
+      
+      {/* CABEÇALHO DO MÓDULO 1 */}
+      <div className="gb-panel p-6 sm:p-8 shadow-2xl mb-8 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div>
+            <div className="inline-flex items-center space-x-2 bg-blue-500/10 text-blue-400 border border-blue-500/20 px-3 py-1 rounded-full text-xs font-mono font-bold uppercase tracking-wider mb-3">
+              <Brain className="w-4 h-4" />
+              <span>Módulo 1: Diagnóstico (7 Perguntas)</span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+              Investigação Estratégica & Sensoriamento
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-400 mt-2 max-w-2xl leading-relaxed">
+              Mapeie os dados invisíveis do seu negócio através do <strong className="text-slate-200 font-mono">Filtro de 7 Perguntas</strong> e acione a <strong className="text-slate-200 font-mono">Matriz de Decisão</strong>.
+            </p>
+          </div>
+
+          {/* INDICADOR DA MATRIZ DE DECISÃO EM TEMPO REAL */}
+          <div className="bg-slate-800/90 border border-slate-700 p-4 rounded-xl min-w-[240px] text-right sm:text-left">
+            <span className="text-[10px] text-slate-400 uppercase font-mono tracking-widest font-bold block mb-1">
+              Matriz de Decisão (Algoritmo):
+            </span>
+            <div className="flex items-center gap-2">
+              <span className={`text-xs font-bold font-mono px-2.5 py-1 rounded ${
+                matrizPrevia.tipo === 'RAPIDA'
+                  ? 'bg-blue-500 text-white shadow-md shadow-blue-500/20 uppercase tracking-wider'
+                  : 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20 uppercase tracking-wider'
+              }`}>
+                {matrizPrevia.tipo === 'RAPIDA' ? 'DECISÃO RÁPIDA' : 'DECISÃO ELABORADA'}
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400 mt-2 line-clamp-2 leading-relaxed">
+              {matrizPrevia.justificativa}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <form onSubmit={submitDiagnostico} className="space-y-8">
+        
+        {/* BLOCO 1: INPUT INICIAL DO NEGÓCIO */}
+        <div className="gb-panel p-6 shadow-xl">
+          <h2 className="text-xs font-bold text-slate-400 uppercase font-mono tracking-wider mb-4 flex items-center gap-2">
+            <span className="w-6 h-6 border border-blue-400 rounded-full flex items-center justify-center text-blue-400 text-[10px]">01</span>
+            Input Inicial do Negócio
+          </h2>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="p-3 bg-slate-800/80 rounded-xl border-l-4 border-blue-500 border-slate-700">
+              <label className="block text-[10px] font-mono text-blue-400 font-bold uppercase mb-1">Nome do Negócio</label>
+              <input
+                type="text"
+                required
+                value={nomeNegocio}
+                onChange={(e) => setNomeNegocio(e.target.value)}
+                placeholder="Ex: Cafeteria Especial"
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500"
+              />
+            </div>
+
+            <div className="p-3 bg-slate-800/80 rounded-xl border-l-4 border-slate-500 border-slate-700">
+              <label className="block text-[10px] font-mono text-slate-400 font-bold uppercase mb-1">Setor do Negócio</label>
+              <input
+                type="text"
+                required
+                value={setor}
+                onChange={(e) => setSetor(e.target.value)}
+                placeholder="Ex: Cafeteria, Gastronomia"
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500"
+              />
+            </div>
+
+            <div className="p-3 bg-slate-800/80 rounded-xl border-l-4 border-slate-500 border-slate-700">
+              <label className="block text-[10px] font-mono text-slate-400 font-bold uppercase mb-1">Modelo Operacional</label>
+              <select
+                value={modeloOperacional}
+                onChange={(e) => setModeloOperacional(e.target.value as ModeloOperacional)}
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500"
+              >
+                <option value="Presencial">Presencial (Ponto Físico)</option>
+                <option value="Online">Online / Digital</option>
+                <option value="Híbrido">Híbrido (Loja + E-commerce)</option>
+              </select>
+            </div>
+
+            <div className="p-3 bg-slate-800/80 rounded-xl border-l-4 border-slate-500 border-slate-700">
+              <label className="block text-[10px] font-mono text-slate-400 font-bold uppercase mb-1">Escopo Geográfico</label>
+              <select
+                value={escopoGeografico}
+                onChange={(e) => setEscopoGeografico(e.target.value as EscopoGeografico)}
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500"
+              >
+                <option value="Local">Local (Raio 5km / Bairro)</option>
+                <option value="Regional">Regional (Estado)</option>
+                <option value="Nacional">Nacional (Brasil)</option>
+                <option value="Global">Global / Internacional</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* BLOCO 2: PROTOCOLO DE INVESTIGAÇÃO (FILTRO DE 7 PERGUNTAS) */}
+        <div className="gb-panel p-6 shadow-xl space-y-6">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+            <h2 className="text-xs font-bold text-slate-400 uppercase font-mono tracking-wider flex items-center gap-2">
+              <span className="w-6 h-6 border border-blue-400 rounded-full flex items-center justify-center text-blue-400 text-[10px]">02</span>
+              Protocolo de Investigação (Filtro de 7 Perguntas)
+            </h2>
+            <span className="text-xs font-mono text-blue-400 font-bold bg-blue-500/10 px-3 py-1 rounded-full border border-blue-500/20">
+              Pergunta {perguntaAtualIdx + 1} de 7
+            </span>
+          </div>
+
+          {/* LISTA DE INDICADORES DAS 7 PERGUNTAS */}
+          <div className="flex space-x-2 overflow-x-auto pb-2">
+            {perguntasList.map((p, idx) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => setPerguntaAtualIdx(idx)}
+                className={`flex-1 min-w-[36px] py-2 rounded-lg text-xs font-mono font-bold transition-all border ${
+                  perguntaAtualIdx === idx
+                    ? 'bg-blue-500 text-white border-blue-400 shadow-md shadow-blue-500/20'
+                    : respostasFiltro[p.id]
+                    ? 'bg-slate-800 text-blue-400 border-slate-700'
+                    : 'bg-slate-800/40 text-slate-500 border-slate-800'
+                }`}
+              >
+                Q{p.id}
+              </button>
+            ))}
+          </div>
+
+          {/* CARDS DA PERGUNTA ATUAL */}
+          {perguntasList[perguntaAtualIdx] && (
+            <div className="bg-slate-800/80 border border-slate-700 rounded-xl p-6 space-y-4">
+              <div>
+                <span className="text-[10px] font-mono font-extrabold text-blue-400 uppercase tracking-widest block mb-1">
+                  Q{perguntasList[perguntaAtualIdx].id}: Pergunta Estratégica
+                </span>
+                <h3 className="text-base sm:text-lg font-bold text-white">
+                  {perguntasList[perguntaAtualIdx].pergunta}
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  {perguntasList[perguntaAtualIdx].subtexto}
+                </p>
+              </div>
+
+              <div className="space-y-2.5 pt-2">
+                {perguntasList[perguntaAtualIdx].opcoes.map((op, oIdx) => {
+                  const selecionada = respostasFiltro[perguntasList[perguntaAtualIdx].id] === op.valor;
+                  return (
+                    <div
+                      key={oIdx}
+                      onClick={() => selecionarOpcao(perguntasList[perguntaAtualIdx].id, op.valor)}
+                      className={`p-3.5 rounded-lg border text-xs font-medium cursor-pointer transition-all flex items-center justify-between border-l-4 ${
+                        selecionada
+                          ? 'bg-blue-500/10 border-blue-500 text-white shadow-sm'
+                          : 'bg-slate-800/90 border-slate-700 border-l-slate-600 text-slate-300 hover:bg-slate-700/80 hover:text-white'
+                      }`}
+                    >
+                      <span>{op.rotulo}</span>
+                      {selecionada && <CheckCircle2 className="w-4 h-4 text-blue-400 flex-shrink-0 ml-2" />}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* BOTOES DE AVANÇO */}
+              <div className="flex justify-between items-center pt-4 border-t border-slate-700">
+                <button
+                  type="button"
+                  disabled={perguntaAtualIdx === 0}
+                  onClick={() => setPerguntaAtualIdx(prev => prev - 1)}
+                  className="px-4 py-2 rounded-lg text-xs font-mono uppercase tracking-wider text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  Anterior
+                </button>
+
+                {perguntaAtualIdx < perguntasList.length - 1 ? (
+                  <button
+                    type="button"
+                    onClick={() => setPerguntaAtualIdx(prev => prev + 1)}
+                    className="px-5 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-xs font-mono uppercase tracking-wider font-bold flex items-center gap-1.5"
+                  >
+                    <span>Próxima Pergunta</span>
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                ) : (
+                  <span className="text-xs text-green-400 font-mono font-bold uppercase tracking-wider">Filtro de 7 Perguntas Concluído!</span>
+                )}
+              </div>
+
+            </div>
+          )}
+
+        </div>
+
+        {/* BOTAO FINAL DE SUBMISSÃO DA CONSULTORIA */}
+        <div className="flex justify-center pt-2">
+          <button
+            type="submit"
+            className="w-full sm:w-auto min-w-[320px] bg-blue-500 hover:bg-blue-400 text-white font-extrabold py-4 px-8 rounded-xl text-xs uppercase tracking-widest shadow-xl shadow-blue-500/20 transition-all flex items-center justify-center space-x-3 scale-100 hover:scale-[1.02]"
+          >
+            <Sparkles className="w-5 h-5 text-white" />
+            <span>Gerar Mocks e Consultoria com IA</span>
+            <ArrowRight className="w-5 h-5 text-white" />
+          </button>
+        </div>
+
+      </form>
+    </div>
+  );
+};
+

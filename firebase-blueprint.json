@@ -1,0 +1,104 @@
+{
+  "entities": {
+    "Usuario": {
+      "title": "Perfil de Usuário",
+      "description": "Dados do perfil do empreendedor ou empresa no GrowBiz",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "ID do usuário" },
+        "nome": { "type": "string", "description": "Nome completo do usuário ou empresa" },
+        "email": { "type": "string", "description": "Endereço de e-mail do usuário" },
+        "telefone": { "type": "string", "description": "Número de telefone celular" },
+        "setor": { "type": "string", "description": "Setor do negócio (ex: Cafeteria, Advocacia, Varejo)" },
+        "modeloOperacional": { "type": "string", "enum": ["Presencial", "Online", "Híbrido"] },
+        "escopoGeografico": { "type": "string", "enum": ["Local", "Regional", "Nacional", "Global"] },
+        "dataCriacao": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "nome", "email", "setor", "modeloOperacional", "escopoGeografico"]
+    },
+    "Diagnostico": {
+      "title": "Diagnóstico do Negócio",
+      "description": "Mapeamento e Filtro de 7 Perguntas com Matriz de Decisão",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "usuarioId": { "type": "string" },
+        "tipoDecisao": { "type": "string", "enum": ["RAPIDA", "ELABORADA"] },
+        "setor": { "type": "string" },
+        "respostasFiltro": { "type": "object", "description": "Mapa com as 7 respostas estratégicas" },
+        "dadosSensoriamento": { "type": "object", "description": "Tendências de mercado e concorrentes locais" },
+        "dataCriacao": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "usuarioId", "tipoDecisao", "setor", "respostasFiltro"]
+    },
+    "Estrategia": {
+      "title": "Planejamento Estratégico",
+      "description": "Relatório triplo: Estratégia Base, Oportunidade e Complementar",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "diagnosticoId": { "type": "string" },
+        "estrategiaBase": { "type": "string" },
+        "estrategiaOportunidade": { "type": "string" },
+        "estrategiaComplementar": { "type": "string" },
+        "dataCriacao": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "diagnosticoId", "estrategiaBase", "estrategiaOportunidade", "estrategiaComplementar"]
+    },
+    "CampanhaConteudo": {
+      "title": "Conteúdo e Execução (Módulo 3)",
+      "description": "Mock visual de imagem, copy persuasiva e roteiro de vídeo por segundos",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "diagnosticoId": { "type": "string" },
+        "titulo": { "type": "string" },
+        "copyPersuasiva": { "type": "string" },
+        "hashtags": { "type": "array" },
+        "imagemUrl": { "type": "string" },
+        "roteiroVideo": { "type": "array", "description": "Lista de cenas do vídeo detalhadas por segundo" },
+        "canalPublicacao": { "type": "string" },
+        "dataCriacao": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "diagnosticoId", "titulo", "copyPersuasiva", "imagemUrl", "roteiroVideo"]
+    },
+    "AnalisePerformance": {
+      "title": "Métricas e Consultoria (Módulo 4)",
+      "description": "Dashboard de KPIs e alertas proativos de pivotagem de tendência",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "campanhaId": { "type": "string" },
+        "ctr": { "type": "number" },
+        "taxaConversao": { "type": "number" },
+        "retornoInvestimento": { "type": "number" },
+        "alertaPivotagemAtivo": { "type": "boolean" },
+        "mensagemPivotagem": { "type": "string" },
+        "dataCriacao": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "campanhaId", "ctr", "taxaConversao", "retornoInvestimento"]
+    }
+  },
+  "firestore": {
+    "usuarios/{usuarioId}": {
+      "schema": { "$ref": "#/entities/Usuario" },
+      "description": "Coleção contendo perfis dos usuários"
+    },
+    "diagnosticos/{diagnosticoId}": {
+      "schema": { "$ref": "#/entities/Diagnostico" },
+      "description": "Coleção contendo diagnósticos estratégicos"
+    },
+    "estrategias/{estrategiaId}": {
+      "schema": { "$ref": "#/entities/Estrategia" },
+      "description": "Coleção contendo estratégias de crescimento"
+    },
+    "campanhas/{campanhaId}": {
+      "schema": { "$ref": "#/entities/CampanhaConteudo" },
+      "description": "Coleção contendo campanhas e mocks de criação"
+    },
+    "performances/{performanceId}": {
+      "schema": { "$ref": "#/entities/AnalisePerformance" },
+      "description": "Coleção de métricas e alertas de performance"
+    }
+  }
+}
