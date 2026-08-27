@@ -65,7 +65,17 @@ export const ModuloResultadosMocks: React.FC<PropriedadesResultados> = ({ result
       ]);
 
       if (novoRoteiro) {
-        setCampanhaAtual(prev => ({ ...prev, roteiroVideo: novoRoteiro }));
+        setCampanhaAtual(prev => {
+          const generoCampanha = prev.roteiroVideo[0]?.generoVoz || novoRoteiro[0]?.generoVoz || 'feminina';
+          return {
+            ...prev,
+            roteiroVideo: novoRoteiro.map((cena, i) => ({
+              ...cena,
+              generoVoz: generoCampanha,
+              promptUsuario: prev.roteiroVideo[i]?.promptUsuario || ''
+            }))
+          };
+        });
       } else {
         setErroRegeneracaoRoteiro('Não foi possível regenerar o roteiro com esse estilo. Tente novamente.');
       }
@@ -120,11 +130,13 @@ export const ModuloResultadosMocks: React.FC<PropriedadesResultados> = ({ result
                 PREVIEW ESTÁTICO • ISSUE #01
               </span>
               <span className={`text-xs font-mono font-bold px-3 py-1 rounded-full border uppercase tracking-wider ${
-                diagnostico.tipoDecisaoCalculado === 'RAPIDA'
-                  ? 'bg-blue-500 text-white border-blue-400'
-                  : 'bg-amber-500 text-slate-950 border-amber-400'
+                diagnostico.categoriaModelo?.quadrante === 1 || diagnostico.categoriaModelo?.quadrante === 4
+                  ? 'bg-amber-500 text-slate-950 border-amber-400'
+                  : 'bg-blue-500 text-white border-blue-400'
               }`}>
-                Matriz: Decisão {diagnostico.tipoDecisaoCalculado === 'RAPIDA' ? 'Rápida' : 'Elaborada'}
+                {diagnostico.categoriaModelo
+                  ? `Q${diagnostico.categoriaModelo.quadrante} · ${diagnostico.categoriaModelo.categoria}`
+                  : `Matriz: Decisão ${diagnostico.tipoDecisaoCalculado === 'RAPIDA' ? 'Rápida' : 'Elaborada'}`}
               </span>
             </div>
 
@@ -217,6 +229,12 @@ export const ModuloResultadosMocks: React.FC<PropriedadesResultados> = ({ result
             aoSelecionarEstilo={aoSelecionarEstiloVideo}
             regenerandoRoteiro={regenerandoRoteiro}
             erroRegeneracao={erroRegeneracaoRoteiro}
+            aoAtualizarCena={(idx, patch) => {
+              setCampanhaAtual(prev => ({
+                ...prev,
+                roteiroVideo: prev.roteiroVideo.map((cena, i) => (i === idx ? { ...cena, ...patch } : cena))
+              }));
+            }}
           />
         </div>
       )}

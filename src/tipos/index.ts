@@ -5,6 +5,42 @@
 export type ModeloOperacional = 'Presencial' | 'Online' | 'Híbrido';
 export type EscopoGeografico = 'Local' | 'Regional' | 'Nacional' | 'Global';
 export type TipoMatrizDecisao = 'RAPIDA' | 'ELABORADA';
+export type QuadranteModeloNegocio = 1 | 2 | 3 | 4;
+
+export interface OpcaoPerguntaEstrategica {
+  rotulo: string;
+  valor: string;
+  pesoDecisao: 'RAPIDA' | 'ELABORADA' | 'NEUTRO';
+  /** Eixo X: ciclo de venda (-10 giro rápido … +10 consultivo) */
+  pontuacaoX: number;
+  /** Eixo Y: escala (-10 local/físico … +10 alta escala digital) */
+  pontuacaoY: number;
+  eOutros?: boolean;
+}
+
+export interface ClassificacaoRespostaOutros {
+  pontuacaoX: number;
+  pontuacaoY: number;
+  valorMaisProximo: string;
+  justificativa: string;
+}
+
+export interface RespostaPerguntaEstrategica {
+  valores: string[];
+  textoOutros?: string;
+  classificacaoOutros?: ClassificacaoRespostaOutros;
+}
+
+export interface CategoriaModeloNegocio {
+  categoria: string;
+  quadrante: QuadranteModeloNegocio;
+  estrategia: string;
+  perfil: string;
+  pontuacaoX: number;
+  pontuacaoY: number;
+  tipoDecisao: TipoMatrizDecisao;
+  justificativa: string;
+}
 
 export interface PerfilUsuario {
   id: string;
@@ -21,15 +57,14 @@ export interface PerguntaEstrategica {
   id: number;
   pergunta: string;
   subtexto: string;
-  opcoes: {
-    rotulo: string;
-    valor: string;
-    pesoDecisao: 'RAPIDA' | 'ELABORADA' | 'NEUTRO';
-  }[];
+  eixo: 'X' | 'Y';
+  opcoes: OpcaoPerguntaEstrategica[];
+  /** Se true, o usuário só pode marcar uma opção (incluindo Outros). */
+  selecaoUnica?: boolean;
 }
 
 export interface RespostasFiltroSetePerguntas {
-  [perguntaId: number]: string;
+  [perguntaId: number]: RespostaPerguntaEstrategica;
 }
 
 export interface SensoriamentoMercado {
@@ -48,6 +83,7 @@ export interface DiagnosticoCompleto {
   escopoGeografico: EscopoGeografico;
   tipoDecisaoCalculado: TipoMatrizDecisao;
   justificativaMatriz: string;
+  categoriaModelo: CategoriaModeloNegocio;
   respostasFiltro: RespostasFiltroSetePerguntas;
   sensoriamento: SensoriamentoMercado;
   dataCriacao: string;
@@ -86,6 +122,8 @@ export interface CenaRoteiroVideo {
   dicaDirecao: string;
   tomNarracao: TomNarracao;
   generoVoz: GeneroVoz;
+  /** Direção extra escrita pelo usuário para o Veo / regeneração desta cena. */
+  promptUsuario?: string;
 }
 
 export interface MockCampanhaConteudo {
