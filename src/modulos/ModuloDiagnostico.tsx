@@ -6,6 +6,7 @@ import {
   CRIAR_DIAGNOSTICO_COMPLETO,
   CLASSIFICAR_RESPOSTAS_OUTROS,
   FILTRO_COMPLETO,
+  PERGUNTA_ESTA_RESPONDIDA,
   OBTER_RESPOSTA_PERGUNTA,
   VALOR_OPCAO_OUTROS
 } from '../servicos/servicoDiagnostico';
@@ -38,6 +39,7 @@ export const ModuloDiagnostico: React.FC<PropriedadesDiagnostico> = ({ usuario, 
 
   const [respostasFiltro, setRespostasFiltro] = useState<RespostasFiltroSetePerguntas>(RESPOSTAS_INICIAIS);
   const [perguntaAtualIdx, setPerguntaAtualIdx] = useState<number>(0);
+  const [investigando, setInvestigando] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [erroFiltro, setErroFiltro] = useState<string | null>(null);
 
@@ -149,14 +151,14 @@ export const ModuloDiagnostico: React.FC<PropriedadesDiagnostico> = ({ usuario, 
                   ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20 uppercase tracking-wider'
                   : 'bg-blue-500 text-white shadow-md shadow-blue-500/20 uppercase tracking-wider'
               }`}>
-                {rotuloQuadrante(categoriaPrevia)}
+                {FILTRO_COMPLETO(respostasFiltro) ? rotuloQuadrante(categoriaPrevia) : 'Responda às 7 perguntas'}
               </span>
             </div>
             <p className="text-[11px] text-slate-400 mt-2 font-mono">
               Ciclo PX {categoriaPrevia.pontuacaoX.toFixed(1)} · Escala PY {categoriaPrevia.pontuacaoY.toFixed(1)}
             </p>
             <p className="text-[11px] text-slate-400 mt-1 line-clamp-2 leading-relaxed">
-              {categoriaPrevia.justificativa}
+              {FILTRO_COMPLETO(respostasFiltro) ? categoriaPrevia.justificativa : 'A classificação será concluída após suas respostas.'}
             </p>
           </div>
         </div>
@@ -189,7 +191,7 @@ export const ModuloDiagnostico: React.FC<PropriedadesDiagnostico> = ({ usuario, 
                 type="text"
                 required
                 value={setor}
-                onChange={(e) => setSetor(e.target.value)}
+                onChange={(e) => { setSetor(e.target.value); setRespostasFiltro(RESPOSTAS_INICIAIS); setPerguntaAtualIdx(0); setInvestigando(false); }}
                 placeholder="Ex: Cafeteria, Gastronomia"
                 className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500"
               />
@@ -224,6 +226,8 @@ export const ModuloDiagnostico: React.FC<PropriedadesDiagnostico> = ({ usuario, 
           </div>
         </div>
 
+        {!investigando && <button type="button" className="gb-btn w-full" disabled={!nomeNegocio.trim() || !setor.trim()} onClick={() => setInvestigando(true)}>Continuar para as 7 perguntas →</button>}
+        {investigando && <>
         <div className="gb-panel p-6 shadow-xl space-y-6">
           <div className="flex items-center justify-between border-b border-slate-800 pb-4">
             <h2 className="text-xs font-bold text-slate-400 uppercase font-mono tracking-wider flex items-center gap-2">
@@ -237,7 +241,7 @@ export const ModuloDiagnostico: React.FC<PropriedadesDiagnostico> = ({ usuario, 
 
           <div className="flex space-x-2 overflow-x-auto pb-2">
             {perguntasList.map((p, idx) => {
-              const respondida = (respostasFiltro[p.id]?.valores.length || 0) > 0;
+              const respondida = PERGUNTA_ESTA_RESPONDIDA(respostasFiltro[p.id]);
               return (
                 <button
                   key={p.id}
@@ -322,6 +326,7 @@ export const ModuloDiagnostico: React.FC<PropriedadesDiagnostico> = ({ usuario, 
                 {perguntaAtualIdx < perguntasList.length - 1 ? (
                   <button
                     type="button"
+                    disabled={!PERGUNTA_ESTA_RESPONDIDA(respostaAtual)}
                     onClick={() => setPerguntaAtualIdx(prev => prev + 1)}
                     className="px-5 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-xs font-mono uppercase tracking-wider font-bold flex items-center gap-1.5"
                   >
@@ -346,7 +351,7 @@ export const ModuloDiagnostico: React.FC<PropriedadesDiagnostico> = ({ usuario, 
         <div className="flex justify-center pt-2">
           <button
             type="submit"
-            disabled={enviando}
+            disabled={enviando || !FILTRO_COMPLETO(respostasFiltro)}
             className="w-full sm:w-auto min-w-[320px] bg-blue-500 hover:bg-blue-400 disabled:opacity-60 text-white font-extrabold py-4 px-8 rounded-xl text-xs uppercase tracking-widest shadow-xl shadow-blue-500/20 transition-all flex items-center justify-center space-x-3 scale-100 hover:scale-[1.02]"
           >
             <Sparkles className="w-5 h-5 text-white" />
@@ -355,6 +360,7 @@ export const ModuloDiagnostico: React.FC<PropriedadesDiagnostico> = ({ usuario, 
           </button>
         </div>
 
+        </>}
       </form>
     </div>
   );

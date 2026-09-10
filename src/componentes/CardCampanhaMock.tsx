@@ -7,6 +7,7 @@ import { SeletorDeCategoria } from './SeletorDeCategoria';
 interface PropriedadesCampanha {
   campanha: MockCampanhaConteudo;
   imagemUrl: string;
+  promptAplicado: string;
   carregandoImagem: boolean;
   modoImagem: 'ia' | 'curada';
   aoAlterarModoImagem: (modo: 'ia' | 'curada') => void;
@@ -20,6 +21,7 @@ interface PropriedadesCampanha {
 export const CardCampanhaMock: React.FC<PropriedadesCampanha> = ({
   campanha,
   imagemUrl: imagemIaUrl,
+  promptAplicado,
   carregandoImagem,
   modoImagem,
   aoAlterarModoImagem: setModoImagem,
@@ -40,7 +42,7 @@ export const CardCampanhaMock: React.FC<PropriedadesCampanha> = ({
   };
 
   const copiarPromptImagem = () => {
-    navigator.clipboard.writeText(campanha.promptImagemIa);
+    navigator.clipboard.writeText(promptAplicado);
     setPromptCopiado(true);
     setTimeout(() => setPromptCopiado(false), 2000);
   };
@@ -118,7 +120,7 @@ export const CardCampanhaMock: React.FC<PropriedadesCampanha> = ({
               )}
 
               <img
-                src={imagemIaUrl}
+                src={imagemIaUrl || undefined}
                 alt={campanha.tituloCampanha}
                 onLoad={aoCarregarImagem}
                 onError={aoErroImagem}
@@ -161,7 +163,7 @@ export const CardCampanhaMock: React.FC<PropriedadesCampanha> = ({
               </button>
             </div>
             <p className="text-[11px] font-mono text-slate-400 bg-slate-900 p-2.5 rounded-lg border border-slate-800 line-clamp-2">
-              "{campanha.promptImagemIa}"
+              "{promptAplicado}"
             </p>
           </div>
         </div>

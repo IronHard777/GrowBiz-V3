@@ -1,3 +1,4 @@
+import { GERAR_LEMBRETE_ICS } from '../servicos/servicoAgenda';
 import React, { useState, useEffect } from 'react';
 import { EventoCalendarioConteudo, CanalPublicacao, StatusEventoCalendario } from '../tipos';
 import {
@@ -33,10 +34,16 @@ interface ColunaKanban {
 
 const COLUNAS: ColunaKanban[] = [
   { status: 'rascunho', titulo: 'Planejadas', corPonto: 'bg-slate-400' },
-  { status: 'agendado', titulo: 'Em Andamento', corPonto: 'bg-blue-400' },
-  { status: 'publicado', titulo: 'Concluídas', corPonto: 'bg-green-400' }
+  { status: 'agendado', titulo: 'Agendadas manualmente', corPonto: 'bg-blue-400' },
+  { status: 'publicado', titulo: 'Publicadas', corPonto: 'bg-green-400' }
 ];
 
+const dataLocal = (data: Date) => new Date(data.getTime() - data.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+const DESTINOS: Record<CanalPublicacao, string> = {
+  'Instagram Reels': 'https://www.instagram.com/', 'Instagram Feed': 'https://www.instagram.com/',
+  'TikTok': 'https://www.tiktok.com/upload', 'WhatsApp Status': 'https://web.whatsapp.com/',
+  'Google Meu Negócio': 'https://business.google.com/'
+};
 const PROXIMO_STATUS: Record<StatusEventoCalendario, StatusEventoCalendario | null> = {
   rascunho: 'agendado',
   agendado: 'publicado',
@@ -48,9 +55,20 @@ export const CalendarioConteudo: React.FC<PropriedadesCalendario> = ({ diagnosti
   const [modalAberto, setModalAberto] = useState<boolean>(false);
   const [eventoParaEditar, setEventoParaEditar] = useState<EventoCalendarioConteudo | null>(null);
 
+  const [agora, setAgora] = useState(Date.now());
+  useEffect(() => { const timer = window.setInterval(() => setAgora(Date.now()), 30000); return () => window.clearInterval(timer); }, []);
+  const baixarLembrete = (evento: EventoCalendarioConteudo) => {
+    const url = URL.createObjectURL(new Blob([GERAR_LEMBRETE_ICS(evento)], {type: 'text/calendar;charset=utf-8'}));
+    const a = document.createElement('a'); a.href = url; a.download = 'lembrete-postagem.ics'; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+  const [semana, setSemana] = useState(0);
+  const inicio = new Date(); inicio.setHours(0,0,0,0); inicio.setDate(inicio.getDate() - (inicio.getDay() + 6) % 7 + semana * 7);
+  const fim = new Date(inicio); fim.setDate(fim.getDate() + 7);
+  const eventosSemana = eventos.filter(e => new Date(e.dataHorario) >= inicio && new Date(e.dataHorario) < fim);
   // Campos do formulário
   const [titulo, setTitulo] = useState<string>('');
-  const [dataHorario, setDataHorario] = useState<string>(new Date().toISOString().slice(0, 16));
+  const [dataHorario, setDataHorario] = useState<string>(dataLocal(new Date()));
   const [canal, setCanal] = useState<CanalPublicacao>('Instagram Reels');
   const [status, setStatus] = useState<StatusEventoCalendario>('rascunho');
   const [copy, setCopy] = useState<string>('');
@@ -58,17 +76,17 @@ export const CalendarioConteudo: React.FC<PropriedadesCalendario> = ({ diagnosti
 
   const recarregarEventos = () => {
     const lista = OBTER_EVENTOS_CALENDARIO();
-    setEventos(lista);
+    setEventos(lista.filter(e => e.diagnosticoId === diagnosticoId).sort((a, b) => new Date(a.dataHorario).getTime() - new Date(b.dataHorario).getTime()));
   };
 
   useEffect(() => {
     recarregarEventos();
-  }, [sinalDeAtualizacao]);
+  }, [sinalDeAtualizacao, diagnosticoId]);
 
   const abrirModalNovo = () => {
     setEventoParaEditar(null);
     setTitulo('');
-    setDataHorario(new Date(Date.now() + 86400000).toISOString().slice(0, 16));
+    setDataHorario(dataLocal(new Date(Date.now() + 86400000)));
     setCanal('Instagram Reels');
     setStatus('rascunho');
     setCopy('');
@@ -79,7 +97,7 @@ export const CalendarioConteudo: React.FC<PropriedadesCalendario> = ({ diagnosti
   const abrirModalEditar = (evt: EventoCalendarioConteudo) => {
     setEventoParaEditar(evt);
     setTitulo(evt.titulo);
-    setDataHorario(evt.dataHorario);
+    setDataHorario(dataLocal(new Date(evt.dataHorario)));
     setCanal(evt.canal);
     setStatus(evt.status);
     setCopy(evt.copy);
@@ -146,7 +164,7 @@ export const CalendarioConteudo: React.FC<PropriedadesCalendario> = ({ diagnosti
             </h3>
           </div>
           <p className="text-xs text-slate-400 mt-1 font-mono">
-            Planejadas → Em Andamento → Concluídas
+            Organize, prepare e publique nos seus canais.
           </p>
         </div>
 
@@ -159,10 +177,19 @@ export const CalendarioConteudo: React.FC<PropriedadesCalendario> = ({ diagnosti
         </button>
       </div>
 
+      <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+        <button className="gb-btn-ghost" onClick={() => setSemana(s => s - 1)}>← Semana anterior</button>
+        <span>{inicio.toLocaleDateString('pt-BR')} a {new Date(fim.getTime() - 1).toLocaleDateString('pt-BR')}</span>
+        <button className="gb-btn-ghost" onClick={() => setSemana(0)}>Hoje</button>
+        <button className="gb-btn-ghost" onClick={() => setSemana(s => s + 1)}>Próxima semana →</button>
+      </div>
+      <p className="text-xs text-slate-400">Agendamento manual: abrir o canal não publica o conteúdo. Confirme a postagem na rede social antes de marcar como publicada.</p>
+      <p className="text-xs text-slate-400">Use “Lembrete” para importar no seu calendário um alerta 30 minutos antes da postagem, inclusive com o app fechado.</p>
+      {eventosSemana.some(e => e.status !== 'publicado' && new Date(e.dataHorario).getTime() < agora + 3600000) && <p role="status" className="text-amber-300 text-sm">Há postagens pendentes ou previstas para a próxima hora. Confira as datas abaixo.</p>}
       {/* QUADRO KANBAN DE 3 COLUNAS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {COLUNAS.map((coluna) => {
-          const eventosDaColuna = eventos.filter(e => e.status === coluna.status);
+          const eventosDaColuna = eventosSemana.filter(e => e.status === coluna.status);
           return (
             <div key={coluna.status}>
               <div className="flex items-center gap-2 mb-3 px-1">
@@ -186,7 +213,7 @@ export const CalendarioConteudo: React.FC<PropriedadesCalendario> = ({ diagnosti
                   const proximo = PROXIMO_STATUS[evt.status];
 
                   return (
-                    <div key={evt.id} className="gb-card p-4">
+                    <div key={evt.id} className={`gb-card p-4 border-t-2 ${evt.status === 'publicado' ? 'border-t-emerald-400' : new Date(evt.dataHorario) < new Date() ? 'border-t-amber-400' : 'border-t-blue-400'}`}>
                       <div className="flex items-center justify-between gap-2 mb-2">
                         <span className="gb-badge-plat flex items-center gap-1">
                           {evt.canal.includes('Reels') || evt.canal.includes('TikTok') ? (
@@ -201,11 +228,13 @@ export const CalendarioConteudo: React.FC<PropriedadesCalendario> = ({ diagnosti
                       <h5 className="text-sm font-bold text-white mb-1 line-clamp-1">{evt.titulo}</h5>
                       <p className="text-xs text-slate-400 mb-3 line-clamp-2 leading-relaxed">{evt.copy}</p>
 
-                      <div className="flex items-center gap-1 text-[11px] font-mono text-slate-500 mb-3">
+                      <div className="flex items-center gap-1 text-[11px] font-mono text-slate-200 mb-3">
                         <Clock className="w-3 h-3" />
                         <span>{dataFormatada}</span>
                       </div>
 
+                      <button type="button" onClick={() => baixarLembrete(evt)} className="text-xs text-blue-300 underline mb-3 mr-4">Lembrete</button>
+                      <a href={DESTINOS[evt.canal]} target="_blank" rel="noopener noreferrer" className="text-blue-300 text-xs underline block mb-3">Abrir {evt.canal} ↗</a>
                       <div className="flex items-center justify-between pt-3 border-t border-white/10">
                         <div className="flex items-center gap-1.5">
                           <button
@@ -230,7 +259,7 @@ export const CalendarioConteudo: React.FC<PropriedadesCalendario> = ({ diagnosti
                             className="gb-btn-ghost flex items-center gap-1 !px-2.5 !py-1 text-[10px]"
                             title={`Mover para ${COLUNAS.find(c => c.status === proximo)?.titulo}`}
                           >
-                            <span>Avançar</span>
+                            <span>{proximo === 'publicado' ? 'Confirmar publicação' : 'Agendar manualmente'}</span>
                             <ArrowRight className="w-3 h-3" />
                           </button>
                         )}

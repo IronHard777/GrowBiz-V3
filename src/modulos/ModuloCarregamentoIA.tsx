@@ -8,11 +8,11 @@ interface PropriedadesCarregamento {
 
 export const ModuloCarregamentoIA: React.FC<PropriedadesCarregamento> = ({ etapaTexto, percentual }) => {
   const etapasVisuais = [
-    { titulo: "Sensoriamento de Mercado Local & Tendências", minPct: 15 },
-    { titulo: "Aplicação da Matriz de Decisão (Rápida vs. Elaborada)", minPct: 40 },
-    { titulo: "Ancoragem em Casos de Sucesso Comprovados", minPct: 65 },
+    { titulo: "Leitura das respostas e classificação do negócio", minPct: 15 },
+    { titulo: "Consulta de referências na web, quando disponível", minPct: 40 },
+    { titulo: "Preparação da estratégia e das hipóteses", minPct: 65 },
     { titulo: "Criação de Mocks Visuais: Copy + Imagem + Roteiro de Vídeo", minPct: 85 },
-    { titulo: "Consolidação Omnichannel & Dashboard de Performance", minPct: 100 }
+    { titulo: "Organização do plano e indicadores de demonstração", minPct: 100 }
   ];
 
   return (

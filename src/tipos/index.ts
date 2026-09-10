@@ -68,6 +68,10 @@ export interface RespostasFiltroSetePerguntas {
 }
 
 export interface SensoriamentoMercado {
+  statusPesquisa?: 'consultado' | 'indisponivel';
+  fontes?: { titulo: string; url: string }[];
+  consultadoEm?: string;
+  sugestoesBuscaHtml?: string;
   concorrentesLocaisMapeados: number;
   tendenciaPrincipal: string;
   volumeBuscaRelativo: string;

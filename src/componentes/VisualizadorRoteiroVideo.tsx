@@ -67,7 +67,6 @@ function formatarTempo(segundos: number): string {
 }
 
 const CORES_CENA = ['#3b82f6', '#22d3ee', '#f59e0b', '#34d399'];
-const veoAutoJaPedido = new Set<string>();
 
 export const VisualizadorRoteiroVideo: React.FC<PropriedadesRoteiro> = ({
   roteiro,
@@ -108,7 +107,6 @@ export const VisualizadorRoteiroVideo: React.FC<PropriedadesRoteiro> = ({
   const tocandoRef = useRef(false);
   const cenaAtivaRef = useRef(0);
   const ultimaCenaNarradaRef = useRef<number | null>(null);
-  const geracaoAutoRef = useRef(false);
   const narracaoTimerRef = useRef<number | null>(null);
 
   tocandoRef.current = tocando;
@@ -435,7 +433,8 @@ export const VisualizadorRoteiroVideo: React.FC<PropriedadesRoteiro> = ({
           roteiroComVoz,
           tituloCampanha,
           undefined,
-          (etapa) => setEtapaVideo(etapa)
+          (etapa) => setEtapaVideo(etapa),
+          estiloSelecionado?.nome
         );
     if (ehFalhaVideoVeo(resultado)) {
       setErroVideo(
@@ -456,14 +455,6 @@ export const VisualizadorRoteiroVideo: React.FC<PropriedadesRoteiro> = ({
     setGerandoVideo(false);
   };
 
-  useEffect(() => {
-    if (!temChaveGemini) return;
-    const chavePedido = `${tituloCampanha}:${roteiro.map(c => c.falaAudio).join('|').slice(0, 120)}`;
-    if (veoAutoJaPedido.has(chavePedido)) return;
-    veoAutoJaPedido.add(chavePedido);
-    void gerarVideoComApi();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tituloCampanha]);
 
   const copiarRoteiroCompleto = () => {
     const texto = roteiro.map(c => (
@@ -786,7 +777,7 @@ export const VisualizadorRoteiroVideo: React.FC<PropriedadesRoteiro> = ({
                   value={roteiro[cenaAtiva].promptUsuario || ''}
                   onChange={(e) => atualizarPromptCena(cenaAtiva, e.target.value)}
                   rows={4}
-                  placeholder="Ex.: duas pessoas conversando no balcão; corte para o close do cliente; barista entrega a xícara; câmera passa por trás do ombro; vapor do espresso; sem foto estática."
+                  placeholder="Ex.: mostre o atendimento real deste negócio, o movimento dos personagens e um close da reação do cliente. Descreva detalhes do seu serviço ou produto."
                   className="w-full text-xs text-slate-200 bg-slate-950/80 border border-slate-700 rounded-lg p-2.5 leading-relaxed resize-y min-h-[88px] placeholder:text-slate-600 focus:outline-none focus:border-violet-500/50"
                 />
                 <div className="flex items-center justify-between gap-2 flex-wrap">

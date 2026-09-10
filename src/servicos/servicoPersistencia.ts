@@ -99,9 +99,9 @@ export function SALVAR_RESULTADO_CONSULTORIA_PERSISTENCIA(resultado: ResultadoCo
       id: `evt_auto_${Date.now()}`,
       diagnosticoId: resultado.diagnostico.id,
       titulo: resultado.campanhaMock.tituloCampanha,
-      dataHorario: new Date(Date.now() + 86400000).toISOString().slice(0, 16), // Amanhã
+      dataHorario: new Date(Date.now() + 86400000).toISOString(), // Amanhã, com fuso preservado
       canal: (resultado.campanhaMock.canalIdeal.includes('Reels') ? 'Instagram Reels' : 'Instagram Feed') as any,
-      status: 'agendado',
+      status: 'rascunho',
       copy: resultado.campanhaMock.copyPersuasiva,
       imagemUrl: resultado.campanhaMock.imagemUrlPlaceholder,
       hashtags: resultado.campanhaMock.hashtagsEstrategicas,

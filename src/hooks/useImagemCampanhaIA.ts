@@ -1,5 +1,6 @@
+import { MONTAR_PROMPT_VISUAL } from '../servicos/servicoContextoVisual';
 import { useEffect, useState } from 'react';
-import { MockCampanhaConteudo } from '../tipos';
+import { MockCampanhaConteudo, DiagnosticoCompleto } from '../tipos';
 import { GERAR_IMAGEM_IMAGEN3 } from '../servicos/servicoGemini';
 import { IDENTIFICAR_CATEGORIA_VISUAL, OBTER_DEFINICAO_CATEGORIA_VISUAL } from '../servicos/servicoCategoriasVisuais';
 import { CategoriaEstilo } from '../servicos/servicoCategoriasEstilo';
@@ -10,35 +11,32 @@ import { CategoriaEstilo } from '../servicos/servicoCategoriasEstilo';
  * imagens de forma independente — o player de vídeo nunca via a imagem real gerada pela IA,
  * apenas um banco de fotos fixo próprio com só 2 categorias.
  */
-export function useImagemCampanhaIA(campanha: MockCampanhaConteudo) {
+export function useImagemCampanhaIA(campanha: MockCampanhaConteudo, diagnostico: DiagnosticoCompleto) {
+  const [erro, setErro] = useState<string | null>(null);
   const [imagemUrl, setImagemUrl] = useState<string>('');
   const [carregando, setCarregando] = useState<boolean>(true);
-  const [modo, setModo] = useState<'ia' | 'curada'>('ia');
+  const [modo, setModo] = useState<'ia' | 'curada'>('curada');
   const [semente, setSemente] = useState<number>(() => Math.floor(Math.random() * 10000));
   const [estiloSelecionado, setEstiloSelecionado] = useState<CategoriaEstilo | null>(null);
 
-  const categoria = IDENTIFICAR_CATEGORIA_VISUAL(campanha.promptImagemIa, campanha.tituloCampanha);
+  const categoria = IDENTIFICAR_CATEGORIA_VISUAL(diagnostico.setor, diagnostico.nomeNegocio);
   const definicaoCategoria = OBTER_DEFINICAO_CATEGORIA_VISUAL(categoria);
+  const promptAplicado = MONTAR_PROMPT_VISUAL(diagnostico, campanha, estiloSelecionado?.modificadorPrompt);
 
   useEffect(() => {
     let ativo = true;
     setCarregando(true);
-
-    const promptBase = campanha.promptImagemIa || campanha.tituloCampanha;
-    const promptComEstilo = estiloSelecionado ? `${promptBase}, ${estiloSelecionado.modificadorPrompt}` : promptBase;
+    if (modo === 'ia') setErro(null);
 
     if (modo === 'ia') {
-      GERAR_IMAGEM_IMAGEN3(promptComEstilo).then(imgBase64 => {
+      GERAR_IMAGEM_IMAGEN3(promptAplicado).then(imgBase64 => {
         if (!ativo) return;
         if (imgBase64) {
           setImagemUrl(imgBase64);
         } else {
-          // Fallback para Pollinations com as palavras-chave da categoria identificada (+ estilo, se houver)
-          const palavrasChave = estiloSelecionado
-            ? `${definicaoCategoria.palavrasChaveImagemIa}, ${estiloSelecionado.modificadorPrompt}`
-            : definicaoCategoria.palavrasChaveImagemIa;
-          const query = encodeURIComponent(`${palavrasChave}, seed ${semente}`);
-          setImagemUrl(`https://image.pollinations.ai/prompt/${query}?width=1000&height=1000&seed=${semente}&nologo=true`);
+          setImagemUrl(definicaoCategoria.imagemCuradaUrl);
+          setModo('curada');
+          setErro('A IA não retornou uma imagem. Exibindo uma foto de referência do setor.');
         }
         setCarregando(false);
       });
@@ -51,27 +49,32 @@ export function useImagemCampanhaIA(campanha: MockCampanhaConteudo) {
       ativo = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [campanha.promptImagemIa, campanha.tituloCampanha, semente, modo, estiloSelecionado]);
+  }, [promptAplicado, semente, modo, definicaoCategoria.imagemCuradaUrl]);
 
   const regenerar = () => setSemente(Math.floor(Math.random() * 10000));
 
   const aoErroImagem = () => {
     setImagemUrl(definicaoCategoria.imagemCuradaUrl);
+    setErro('Não foi possível carregar a imagem. Tente gerar uma nova versão.');
+    setModo('curada');
     setCarregando(false);
   };
 
   const selecionarEstilo = (novoEstilo: CategoriaEstilo) => {
     setEstiloSelecionado(prev => (prev?.id === novoEstilo.id ? null : novoEstilo));
+    setModo('ia');
   };
 
   return {
     imagemUrl,
+    promptAplicado,
+    erro,
     carregando,
     modo,
     setModo,
     regenerar,
     aoErroImagem,
-    aoCarregarImagem: () => setCarregando(false),
+    aoCarregarImagem: () => undefined,
     estiloSelecionado,
     selecionarEstilo
   };

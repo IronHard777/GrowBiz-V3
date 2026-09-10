@@ -1,3 +1,4 @@
+import { MONTAR_PROMPT_VISUAL } from '../servicos/servicoContextoVisual';
 import React, { useState } from 'react';
 import { MockCampanhaConteudo, ResultadoCompletoConsultoria, PropostaCampanha, CanalPublicacao } from '../tipos';
 import { CardCampanhaMock } from '../componentes/CardCampanhaMock';
@@ -38,7 +39,7 @@ export const ModuloResultadosMocks: React.FC<PropriedadesResultados> = ({ result
 
   // Única fonte da imagem visual da campanha — compartilhada entre o mockup estático e o
   // player de vídeo, para que ambos mostrem exatamente a mesma imagem gerada/personalizada.
-  const imagemCampanha = useImagemCampanhaIA(campanhaAtual);
+  const imagemCampanha = useImagemCampanhaIA(campanhaAtual, diagnostico);
 
   const aplicarPivotagem = () => {
     setNotificacaoPivotagem(true);
@@ -48,6 +49,7 @@ export const ModuloResultadosMocks: React.FC<PropriedadesResultados> = ({ result
   const aoSelecionarEstiloVideo = async (categoria: CategoriaEstilo) => {
     // Toque na categoria já ativa desmarca e volta ao roteiro original não é suportado aqui
     // (o roteiro base já foi sobrescrito) — reselecionar apenas troca de estilo.
+    setImagemVideoEstilizada(null);
     setEstiloVideoSelecionado(categoria);
     setRegenerandoRoteiro(true);
     setErroRegeneracaoRoteiro(null);
@@ -55,9 +57,7 @@ export const ModuloResultadosMocks: React.FC<PropriedadesResultados> = ({ result
       // Regenera roteiro (texto) e imagem do player (visual) em paralelo — antes só o texto
       // mudava e a prévia do player continuava sempre com a mesma foto, dando a impressão de
       // que a escolha de categoria não fazia nada.
-      const promptImagemEstilizada = categoria.modificadorImagemIngles
-        ? `${campanhaAtual.promptImagemIa}, ${categoria.modificadorImagemIngles}`
-        : campanhaAtual.promptImagemIa;
+      const promptImagemEstilizada = MONTAR_PROMPT_VISUAL(diagnostico, campanhaAtual, categoria.modificadorImagemIngles);
 
       const [novoRoteiro, novaImagem] = await Promise.all([
         GERAR_ROTEIRO_VIDEO_COM_ESTILO_GEMINI(diagnostico, campanhaAtual, categoria.nome, categoria.modificadorPrompt),
@@ -96,7 +96,7 @@ export const ModuloResultadosMocks: React.FC<PropriedadesResultados> = ({ result
       id: `evt_${proposta.id}`,
       diagnosticoId: diagnostico.id,
       titulo: proposta.titulo,
-      dataHorario: new Date(Date.now() + 86400000).toISOString().slice(0, 16),
+      dataHorario: new Date(Date.now() + 86400000).toISOString(),
       canal: proposta.plataforma as CanalPublicacao,
       status: 'rascunho',
       copy: proposta.descricao,
@@ -127,7 +127,7 @@ export const ModuloResultadosMocks: React.FC<PropriedadesResultados> = ({ result
             <div className="flex flex-wrap items-center gap-2 mb-3">
               <span className="bg-blue-500/10 text-blue-400 border border-blue-500/20 px-3 py-1 rounded-full text-xs font-mono font-bold flex items-center gap-1.5 uppercase tracking-wider">
                 <Sparkles className="w-3.5 h-3.5 text-blue-400" />
-                PREVIEW ESTÁTICO • ISSUE #01
+                SEU PLANO DE CAMPANHA
               </span>
               <span className={`text-xs font-mono font-bold px-3 py-1 rounded-full border uppercase tracking-wider ${
                 diagnostico.categoriaModelo?.quadrante === 1 || diagnostico.categoriaModelo?.quadrante === 4
@@ -160,15 +160,21 @@ export const ModuloResultadosMocks: React.FC<PropriedadesResultados> = ({ result
           </div>
         </div>
 
-        {/* ANCORAGEM EM CASOS DE SUCESSO (MÓDULO 1) */}
-        <div className="mt-6 pt-5 border-t border-white/10 grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-          {diagnostico.sensoriamento.casosDeSucessoAncorados.map((caso, idx) => (
-            <div key={idx} className="gb-card p-3 border-l-4 border-l-blue-500 text-slate-300 flex items-start space-x-2">
-              <CheckCircle2 className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
-              <span className="text-[11px] leading-snug">{caso}</span>
-            </div>
-          ))}
+        <div className="mt-5 text-sm text-slate-300 space-y-3">
+          <p>{diagnostico.sensoriamento.statusPesquisa === 'consultado' ? 'Referências de mercado consultadas — resultados de terceiros não garantem o desempenho desta campanha.' : 'Pesquisa indisponível. Este plano contém hipóteses para validar, sem casos comprovados.'}</p>
+          {diagnostico.sensoriamento.fontes?.map((fonte, i) => <a key={i} href={fonte.url} target="_blank" rel="noopener noreferrer" className="inline-block mr-4 text-blue-300 underline">{fonte.titulo}</a>)}
+          {diagnostico.sensoriamento.sugestoesBuscaHtml && <iframe title="Sugestões de pesquisa do Google" sandbox="allow-popups allow-popups-to-escape-sandbox" srcDoc={diagnostico.sensoriamento.sugestoesBuscaHtml} className="w-full border-0 h-20" />}
         </div>
+        {diagnostico.sensoriamento.casosDeSucessoAncorados.length > 0 && (
+          <details className="mt-4 border-t border-white/10 pt-4">
+            <summary className="cursor-pointer text-sm text-blue-300 font-semibold">Ver pesquisa, resultados reportados e limites de aplicação</summary>
+            <div className="mt-4 space-y-4 text-sm leading-relaxed text-slate-300 max-w-4xl">
+              {diagnostico.sensoriamento.casosDeSucessoAncorados.flatMap(caso => caso.split(/\n\s*\n/)).map((paragrafo, idx) => (
+                <p key={idx}>{paragrafo.replace(/\*+/g, '')}</p>
+              ))}
+            </div>
+          </details>
+        )}
       </div>
 
       {/* NOTIFICAÇÃO SE A PIVOTAGEM FOR APLICADA */}
@@ -207,7 +213,9 @@ export const ModuloResultadosMocks: React.FC<PropriedadesResultados> = ({ result
           />
 
           {/* MOCKUP VISUAL DE IMAGEM + COPY */}
+          {imagemCampanha.erro && <p role="status" className="text-sm text-amber-300">{imagemCampanha.erro}</p>}
           <CardCampanhaMock
+            promptAplicado={imagemCampanha.promptAplicado}
             campanha={campanhaAtual}
             imagemUrl={imagemCampanha.imagemUrl}
             carregandoImagem={imagemCampanha.carregando}
@@ -222,6 +230,7 @@ export const ModuloResultadosMocks: React.FC<PropriedadesResultados> = ({ result
 
           {/* ROTEIRO DE VÍDEO DETALHADO POR SEGUNDOS */}
           <VisualizadorRoteiroVideo
+            key={`${diagnostico.id}-${estiloVideoSelecionado?.id || 'natural'}`}
             roteiro={campanhaAtual.roteiroVideo}
             tituloCampanha={campanhaAtual.tituloCampanha}
             imagemVisualPrincipal={imagemVideoEstilizada || imagemCampanha.imagemUrl}

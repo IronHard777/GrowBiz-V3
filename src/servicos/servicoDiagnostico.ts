@@ -33,7 +33,7 @@ const comOutros = (opcoes: OpcaoPerguntaEstrategica[]): OpcaoPerguntaEstrategica
  * Pontuações: X = ciclo de venda (-10 giro rápido … +10 consultivo)
  *             Y = escala (-10 local/físico … +10 alta escala digital)
  */
-export const OBTER_SETE_PERGUNTAS_ESTRATEGICAS = (_setor: string): PerguntaEstrategica[] => [
+const PERGUNTAS_BASE = (): PerguntaEstrategica[] => [
   {
     id: 1,
     eixo: 'X',
@@ -115,6 +115,32 @@ export const OBTER_SETE_PERGUNTAS_ESTRATEGICAS = (_setor: string): PerguntaEstra
     ])
   }
 ];
+
+export function OBTER_SETE_PERGUNTAS_ESTRATEGICAS(setor: string): PerguntaEstrategica[] {
+  const perguntas = PERGUNTAS_BASE();
+  const texto = normalizarTexto(setor);
+  const salao = /salao|cabeleir|cabelereir|barbear|hair/.test(texto);
+  const servico = salao || /servic|consult|advoc|clinic|estetic|oficina|educacao|contab/.test(texto);
+  const gastronomia = /restaurante|cafeteria|padaria|gastronomia|pizzaria/.test(texto);
+  const oferta = salao ? 'atendimento de cabelo' : servico ? 'serviço' : gastronomia ? 'pedido' : 'produto';
+  perguntas[0].pergunta = `Quanto tempo o cliente leva para decidir pelo ${oferta} em ${setor}?`;
+  perguntas[0].opcoes[0].rotulo = salao ? 'No mesmo dia, para corte, escova ou manutenção' : 'No mesmo dia ou em poucas horas';
+  perguntas[0].opcoes[1].rotulo = salao ? 'Até uma semana, comparando horários e profissionais' : 'Entre 1 e 7 dias, comparando opções';
+  perguntas[0].opcoes[2].rotulo = salao ? 'Semanas, para uma transformação ou tratamento planejado' : 'Semanas ou meses, após avaliação detalhada';
+  perguntas[1].pergunta = `O que seu cliente mais busca ao escolher seu ${oferta}?`;
+  if (salao) {
+    perguntas[1].opcoes[0].rotulo = 'Cuidar do visual com praticidade e horário disponível';
+    perguntas[1].opcoes[1].rotulo = 'Manter o cabelo bem cuidado com preço acessível';
+    perguntas[1].opcoes[2].rotulo = 'Confiar em um especialista para coloração ou transformação';
+  }
+  perguntas[2].pergunta = `Qual é o valor médio pago por ${oferta}?`;
+  perguntas[4].pergunta = `Qual é o principal diferencial de ${setor} no seu negócio?`;
+  perguntas[4].opcoes[1].rotulo = servico ? 'Qualidade consistente e clientes que retornam' : 'Qualidade e disponibilidade dos produtos mais procurados';
+  perguntas[5].pergunta = servico ? 'Quantos novos atendimentos sua equipe consegue absorver?' : 'Quanto sua operação consegue crescer sem perder qualidade?';
+  perguntas[6].opcoes[0].rotulo = servico ? 'Preencher os horários disponíveis da semana' : gastronomia ? 'Aumentar os pedidos da semana' : 'Girar o estoque e promover um produto da semana';
+  perguntas[6].subtexto = `Defina a prioridade. Em Outros, indique o ${oferta} que quer promover e eventuais condições reais.`;
+  return perguntas;
+}
 
 export function OBTER_RESPOSTA_PERGUNTA(
   respostas: RespostasFiltroSetePerguntas,
@@ -332,14 +358,12 @@ export function GERAR_SENSORIAMENTO_MERCADO(
   escopo: EscopoGeografico
 ): SensoriamentoMercado {
   return {
-    concorrentesLocaisMapeados: Math.floor(Math.random() * 18) + 12,
-    tendenciaPrincipal: `Aumento de 42% na busca por soluções diretas e atendimento ágil em ${setor}`,
-    volumeBuscaRelativo: `Alta demanda (+38% vs. mês anterior em pesquisas locais)`,
-    casosDeSucessoAncorados: [
-      `Caso #104: Aumento de 310% na taxa de conversão com campanhas focadas na dor latente em ${setor}.`,
-      `Caso #88: Redução de 45% no custo por cliente via prova social e anúncios de alta urgência visual.`,
-      `Caso #212: Estruturação de jornada no WhatsApp gerando reativação de 28% da base inativa.`
-    ]
+    concorrentesLocaisMapeados: 0,
+    statusPesquisa: 'indisponivel',
+    fontes: [],
+    tendenciaPrincipal: `Hipótese para testar em ${setor}: destacar o diferencial e facilitar o contato.`,
+    volumeBuscaRelativo: 'Volume de buscas não consultado.',
+    casosDeSucessoAncorados: []
   };
 }
 

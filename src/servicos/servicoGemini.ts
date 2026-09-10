@@ -1,12 +1,12 @@
 import { GoogleGenAI } from '@google/genai';
-import { DiagnosticoCompleto, EscopoGeografico, CenaRoteiroVideo, MockCampanhaConteudo, PropostaCampanha, ClassificacaoRespostaOutros, PerguntaEstrategica } from '../tipos';
+import { DiagnosticoCompleto, EstrategiaCrescimento, SensoriamentoMercado, EscopoGeografico, CenaRoteiroVideo, MockCampanhaConteudo, PropostaCampanha, ClassificacaoRespostaOutros, PerguntaEstrategica } from '../tipos';
 
 const REGRA_TOM_E_VOZ = `Tom de narração PODE variar entre cenas (abertura empolgante, dor séria, solução energética, CTA agitada).
 Gênero da voz NÃO pode variar: use o MESMO "generoVoz" nas 4 cenas (padrão "feminina", a menos que o negócio peça explicitamente voz masculina). Trocar de feminino para masculino no meio da propaganda quebra o sentido comercial.
 
 ELENCO TRAVADO (obrigatório): na cena 1 descreva a protagonista com identidade fixa (idade aparente, tom de pele, COR e COMPRIMENTO do cabelo, se o cabelo está solto/preso/pixie, roupa). Nas cenas 2, 3 e 4 escreva "a MESMA protagonista da cena 1" e repita cabelo + roupa. PROIBIDO mudar corte de cabelo (ex.: pixie virar rabo-de-cavalo), prender/soltar cabelo, trocar roupa, idade ou ator sem o roteiro pedir explicitamente.
 
-Cada "acaoVisual" DEVE ser cinematográfica, com pessoas reais adultas, cenário completo e interação — nunca só um close de produto estático:
+Cada "acaoVisual" DEVE ser cinematográfica, com personagens adultos, cenário completo e interação — nunca só um close de produto estático:
 - quem está em cena (a mesma protagonista + outros se houver)
 - o que fazem (olhares, sorrisos, troca de produto, reação)
 - cortes de câmera (plano geral → close no rosto → over-the-shoulder)
@@ -66,6 +66,7 @@ export async function GERAR_COPY_PERSUASIVA_GEMINI(
   hashtags: string[];
   promptImagem: string;
   roteiroVideo: CenaRoteiroVideo[];
+  estrategias?: EstrategiaCrescimento;
 } | null> {
   const apiKey = obterChaveGemini();
   if (!apiKey) return null;
@@ -83,17 +84,25 @@ Gere um plano de conteúdo comercial e roteiro de vídeo Reels/TikTok 100% EXCLU
 - Categoria do modelo (quadrante ${diagnostico.categoriaModelo?.quadrante ?? '-'}): ${diagnostico.categoriaModelo?.categoria || 'não classificado'}
 - Estratégia do quadrante: ${diagnostico.categoriaModelo?.estrategia || diagnostico.justificativaMatriz}
 - Objetivo da Campanha: ${objetivo}
+- Respostas reais do negócio: ${JSON.stringify(diagnostico.respostasFiltro)}
+- Pesquisa e fontes disponíveis: ${JSON.stringify(diagnostico.sensoriamento)}
+Use as referências apenas quando comparáveis. Explique a adaptação nos campos da estratégia; a copy pública deve falar com o cliente. Para cada ação estratégica, identifique o caso consultado e seu limite de aplicação. Sem evidência comparável, escreva "Hipótese a validar". Não invente preços, escassez, depoimentos ou resultados. Um caso publicado não garante o mesmo desempenho neste negócio. Não invente metas numéricas de CPA, conversão ou ROI: proponha medir uma linha de base antes de definir metas. Serviços, combos e descontos não confirmados pelo usuário devem aparecer apenas como sugestões a confirmar, nunca como ofertas já existentes na copy pública.
 
 REGRAS RÍGIDAS DE GERAÇÃO:
 1. O Roteiro de vídeo deve conter 4 cenas contínuas, sem segundo vazio entre elas (0-4s Gancho, 4-8s Dor, 8-16s Solução, 16-22s CTA).
 2. As falas ("falaAudio") DEVEM SER TOTALMENTE ESPECÍFICAS para o negócio "${diagnostico.nomeNegocio}" do setor "${diagnostico.setor}". NUNCA use modelos prontos ou genéricos!
 3. Na última cena (CTA), escreva "Zap" ou "Whats" em vez de "WhatsApp" para que a pronúncia de áudio nativa soe perfeita em português.
-4. O campo "promptImagem" DEVE ser em INGLÊS comercial focado em produtos do setor "${diagnostico.setor}".
+4. O campo "promptImagem" DEVE ser em INGLÊS comercial focado no produto OU serviço real do setor "${diagnostico.setor}".
 5. ${REGRA_TOM_E_VOZ}${anexos && anexos.length > 0 ? `
 6. Você recebeu ${anexos.length} arquivo(s) real(is) anexado(s) pelo cliente (catálogo, cardápio ou fotos do produto/local). ANALISE o conteúdo desses arquivos e use detalhes CONCRETOS observados neles (produtos específicos, preços, nomes, estilo visual, ambiente real) na copy, nas hashtags e principalmente no campo "promptImagem" — em vez de generalizações sobre o setor "${diagnostico.setor}". Priorize sempre o que você vê nos arquivos reais sobre suposições genéricas do setor.` : ''}
 
 Retorne um JSON válido com o seguinte formato exato (sem marcadores de código markdown):
 {
+  "estrategias": {
+    "estrategiaBase": { "titulo": "Plano de presença", "pilaresAtemporais": ["Ação específica, caso de referência e limite de aplicação"], "descricao": "Como o padrão observado se adapta ao negócio e às respostas" },
+    "estrategiaOportunidade": { "titulo": "Teste de campanha", "planoAtaqueImediato": "Ação, canal, referência consultada e métrica para validar", "gatilhoTendencia": "Evidência datada ou hipótese explicitamente identificada" },
+    "estrategiaComplementar": { "titulo": "Relacionamento fora das redes", "jornadaForaRedes": { "googleMeuNegocio": "Ação pertinente ao modelo operacional e sua evidência ou hipótese", "whatsappEstrategico": "Ação pertinente e sua evidência ou hipótese", "deliveryOuPresencial": "Ação adequada à entrega real do serviço ou produto e sua evidência ou hipótese" } }
+  },
   "copy": "Texto persuasivo em português brasileiro com emojis e CTA claro",
   "hashtags": ["#Tag1", "#Tag2", "#Tag3", "#Tag4", "#Tag5"],
   "promptImagem": "Professional commercial product photography of ${diagnostico.setor}, studio lighting, 8k resolution",
@@ -152,6 +161,7 @@ Retorne um JSON válido com o seguinte formato exato (sem marcadores de código 
       model: 'gemini-flash-latest',
       contents: [{ role: 'user', parts: partes }],
       config: {
+        httpOptions: { timeout: 60000 },
         responseMimeType: 'application/json'
       }
     });
@@ -164,12 +174,26 @@ Retorne um JSON válido com o seguinte formato exato (sem marcadores de código 
       copy: parsed.copy,
       hashtags: parsed.hashtags || [],
       promptImagem: parsed.promptImagem,
-      roteiroVideo: normalizarRoteiro(parsed.roteiroVideo)
+      roteiroVideo: normalizarRoteiro(parsed.roteiroVideo),
+      estrategias: VALIDAR_ESTRATEGIAS_GEMINI(parsed.estrategias) ? parsed.estrategias : undefined
     };
   } catch (error) {
     console.warn("Aviso ao chamar API Gemini (fallback ativado):", error);
     return null;
   }
+}
+
+export function VALIDAR_ESTRATEGIAS_GEMINI(valor: unknown): valor is EstrategiaCrescimento {
+  const e = valor as EstrategiaCrescimento | undefined;
+  const texto = (v: unknown) => typeof v === 'string' && v.trim().length > 0;
+  return !!e && [e.estrategiaBase?.titulo, e.estrategiaBase?.descricao,
+    e.estrategiaOportunidade?.titulo, e.estrategiaOportunidade?.planoAtaqueImediato,
+    e.estrategiaOportunidade?.gatilhoTendencia, e.estrategiaComplementar?.titulo,
+    e.estrategiaComplementar?.jornadaForaRedes?.googleMeuNegocio,
+    e.estrategiaComplementar?.jornadaForaRedes?.whatsappEstrategico,
+    e.estrategiaComplementar?.jornadaForaRedes?.deliveryOuPresencial].every(texto)
+    && Array.isArray(e.estrategiaBase?.pilaresAtemporais)
+    && e.estrategiaBase.pilaresAtemporais.length > 0 && e.estrategiaBase.pilaresAtemporais.every(texto);
 }
 
 /**
@@ -187,7 +211,7 @@ export async function GERAR_IMAGEM_IMAGEN3(prompt: string): Promise<string | nul
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
       contents: prompt,
-      config: { imageConfig: { aspectRatio: '9:16' } } as any
+      config: { imageConfig: { aspectRatio: '9:16' }, httpOptions: { timeout: 90000 } }
     });
 
     const partes = response.candidates?.[0]?.content?.parts || [];
@@ -210,55 +234,40 @@ export async function GERAR_IMAGEM_IMAGEN3(prompt: string): Promise<string | nul
 export async function GERAR_SENSORIAMENTO_MERCADO_GEMINI(
   setor: string,
   nomeNegocio: string,
-  escopo: EscopoGeografico
-): Promise<{
-  tendenciaPrincipal: string;
-  volumeBuscaRelativo: string;
-  casosDeSucessoAncorados: string[];
-} | null> {
+  escopo: EscopoGeografico,
+  contexto?: DiagnosticoCompleto
+): Promise<SensoriamentoMercado | null> {
   const apiKey = obterChaveGemini();
   if (!apiKey) return null;
-
   try {
     const ai = new GoogleGenAI({ apiKey });
-
-    const prompt = `Você é um analista de mercado e tendências digitais para o aplicativo GrowBiz V2.2.
-Gere um sensoriamento de mercado 100% ESPECÍFICO para o negócio "${nomeNegocio}", setor "${setor}", abrangência geográfica "${escopo}".
-
-REGRAS RÍGIDAS:
-1. NUNCA use números ou casos genéricos e repetitivos — cada geração deve trazer percentuais e cenários plausíveis, mas DISTINTOS, coerentes com o setor e a abrangência informados.
-2. Os "casos de sucesso" devem soar reais e específicos ao setor "${setor}" (linguagem, métricas e formato de campanha coerentes com esse tipo de negócio), sem citar a marca "${nomeNegocio}" diretamente (são casos de outros negócios do mesmo setor).
-
-Retorne APENAS um JSON válido (sem marcadores de código markdown) no formato exato:
-{
-  "tendenciaPrincipal": "Frase curta sobre uma tendência de mercado atual específica para ${setor}",
-  "volumeBuscaRelativo": "Frase curta sobre volume de busca/demanda local, com percentual plausível",
-  "casosDeSucessoAncorados": ["Caso específico 1 para ${setor}", "Caso específico 2 para ${setor}", "Caso específico 3 para ${setor}"]
-}`;
-
     const response = await ai.models.generateContent({
       model: 'gemini-flash-latest',
-      contents: prompt,
-      config: {
-        responseMimeType: 'application/json'
-      }
+      contents: `Pesquise na web casos de marketing publicados para o setor ${JSON.stringify(setor)}, alcance ${escopo}.
+      Contexto para comparação: ${JSON.stringify({ modelo: contexto?.modeloOperacional, respostas: contexto?.respostasFiltro })}.
+      Prefira casos oficiais de Google, Meta e TikTok. Compare setor, objetivo, canal e porte; explicite diferenças.
+      Responda em português em até 3 parágrafos: empresa do caso, ação documentada, resultado reportado e limitação para aplicar ao setor solicitado.
+      Cite fontes. Não invente casos, concorrentes, percentuais ou demanda local. Anúncio ativo não comprova lucro.
+      Se não encontrar caso comparável, diga isso explicitamente. Nunca apresente inferência como resultado comprovado.
+      O nome ${JSON.stringify(nomeNegocio)} é somente contexto; não invente informações sobre ele.`,
+      config: { tools: [{ googleSearch: {} }], httpOptions: { timeout: 45000 } }
     });
-
-    const texto = response.text || '';
-    const limpo = texto.replace(/```json/g, '').replace(/```/g, '').trim();
-    const parsed = JSON.parse(limpo);
-
-    if (!parsed.tendenciaPrincipal || !Array.isArray(parsed.casosDeSucessoAncorados)) {
-      return null;
-    }
-
+    const metadata = response.candidates?.[0]?.groundingMetadata;
+    const fontes = (metadata?.groundingChunks || []).flatMap(chunk => {
+      const web = chunk.web;
+      return web?.uri && /^https:\/\//.test(web.uri) ? [{ titulo: web.title || 'Fonte da pesquisa', url: web.uri }] : [];
+    });
+    if (!fontes.length || !metadata?.webSearchQueries?.length || !response.text) return null;
     return {
-      tendenciaPrincipal: parsed.tendenciaPrincipal,
-      volumeBuscaRelativo: parsed.volumeBuscaRelativo,
-      casosDeSucessoAncorados: parsed.casosDeSucessoAncorados
+      concorrentesLocaisMapeados: 0,
+      statusPesquisa: 'consultado', fontes, consultadoEm: new Date().toISOString(),
+      sugestoesBuscaHtml: metadata.searchEntryPoint?.renderedContent,
+      tendenciaPrincipal: 'Referências externas consultadas; aplicação ao negócio é uma hipótese a testar.',
+      volumeBuscaRelativo: 'Não medido. Casos publicados não estimam demanda local.',
+      casosDeSucessoAncorados: [response.text]
     };
-  } catch (error) {
-    console.warn("Aviso ao gerar sensoriamento de mercado via Gemini (fallback ativado):", error);
+  } catch {
+    console.warn('Pesquisa de mercado indisponível; nenhuma evidência será inventada.');
     return null;
   }
 }
@@ -313,6 +322,7 @@ Retorne APENAS um JSON válido (sem marcadores de código markdown) no formato e
       model: 'gemini-flash-latest',
       contents: prompt,
       config: {
+        httpOptions: { timeout: 60000 },
         responseMimeType: 'application/json'
       }
     });
@@ -355,7 +365,9 @@ Gere 3 propostas de campanha DISTINTAS (plataformas e formatos diferentes entre 
 - Setor: ${diagnostico.setor}
 - Matriz de Decisão: ${diagnostico.tipoDecisaoCalculado}
 - Categoria do modelo (quadrante ${diagnostico.categoriaModelo?.quadrante ?? '-'}): ${diagnostico.categoriaModelo?.categoria || 'não classificado'}
-- Campanha-base já validada: ${campanha.tituloCampanha} (objetivo: ${campanha.objetivoPrincipal})
+- Respostas: ${JSON.stringify(diagnostico.respostasFiltro)}
+- Referências: ${JSON.stringify(diagnostico.sensoriamento)}
+- Campanha-base proposta: ${campanha.tituloCampanha} (objetivo: ${campanha.objetivoPrincipal})
 
 REGRAS RÍGIDAS:
 1. Cada proposta usa uma plataforma diferente, escolhida entre: "Instagram Reels", "TikTok", "Instagram Feed", "WhatsApp Status", "Google Meu Negócio".
@@ -554,16 +566,16 @@ function linhaCena(cena: CenaRoteiroVideo, rotulo: string): string {
   return `${rotulo}: CAMERA ${cena.enquadramentoCamera}. ACTION: ${cena.acaoVisual}. Line: "${cena.falaAudio.replace(/["']/g, '')}".${extra}`;
 }
 
-function montarPromptVideoVeo(roteiro: CenaRoteiroVideo[], tituloCampanha: string): string {
+function montarPromptVideoVeo(roteiro: CenaRoteiroVideo[], tituloCampanha: string, estilo = 'cinematográfico natural'): string {
   const genero = descricaoGenero(roteiro);
   const gancho = roteiro[0];
   const dor = roteiro[1] || roteiro[0];
 
-  return `Live-action cinematic vertical 9:16 commercial PART 1 for "${tituloCampanha}". Duration 8 seconds. 720p.
+  return `Animated or live-action (according to the selected style: ${estilo}) vertical 9:16 commercial PART 1 for "${tituloCampanha}". Duration 8 seconds. 720p.
 
 This is ONLY the opening of a longer ad (Google Flow / scene-extension style). Do NOT deliver the WhatsApp/CTA yet. End on a living shot that can continue: same people, same location, camera still moving.
 
-MUST include: real adult people, full environment, interaction, camera CUTS, practical motion.
+MUST include: adult characters, full environment, interaction and continuous visible subject motion. Use live-action for photographic styles; anime, pixel art or stop-motion must retain their chosen medium. No slideshow, no still image with zoom, no frozen subject.
 MUST keep ${genero}. Spoken Brazilian Portuguese. Natural ambient sound.
 ${TRAVA_ELENCO_VEO}
 
@@ -834,9 +846,10 @@ export async function GERAR_VIDEO_VEO(
   roteiro: CenaRoteiroVideo[],
   tituloCampanha: string,
   _imagemReferencia?: string,
-  notificarProgresso?: (etapa: string) => void
+  notificarProgresso?: (etapa: string) => void,
+  estilo?: string
 ): Promise<ResultadoVideoVeo | FalhaVideoVeo> {
-  return executarGenerateVideos(montarPromptVideoVeo(roteiro, tituloCampanha), notificarProgresso);
+  return executarGenerateVideos(montarPromptVideoVeo(roteiro, tituloCampanha, estilo), notificarProgresso);
 }
 
 export async function ESTENDER_VIDEO_VEO(
@@ -856,4 +869,5 @@ export async function ESTENDER_VIDEO_VEO(
     notificarProgresso
   );
 }
+
 

@@ -29,24 +29,24 @@ export function GERAR_ESTRATEGIA_TRIPLA(diagnostico: DiagnosticoCompleto): Estra
 
   return {
     estrategiaBase: {
-      titulo: `Pilares Atemporais — ${categoria}`,
+      titulo: `Hipótese de presença — ${categoria}`,
       pilaresAtemporais: [
         `Posicionamento no quadrante ${quadrante}: ${estrategiaQuadrante}`,
         `Prova Social Consistente: Exibição sistemática de depoimentos reais e casos de sucesso em ${setor}.`,
         `Consistência Multicanal: Alinhamento visual e de tom de voz nos canais do quadrante ${quadrante}.`
       ],
-      descricao: `Estratégia de marca para ${nome} no perfil "${categoria}", independente das oscilações de algoritmos.`
+      descricao: `Hipótese local para ${nome} no perfil "${categoria}". Este plano padrão ainda precisa de validação; não foi derivado de um caso comprovado.`
     },
     estrategiaOportunidade: {
-      titulo: `Plano de Ataque Imediato (${estrategiaQuadrante})`,
+      titulo: `Hipótese de campanha (${estrategiaQuadrante})`,
       planoAtaqueImediato: planoPorQuadrante[quadrante],
       gatilhoTendencia: diagnostico.sensoriamento.tendenciaPrincipal
     },
     estrategiaComplementar: {
-      titulo: `Jornada Omnichannel Fora das Redes Sociais`,
+      titulo: `Hipóteses fora das redes sociais`,
       jornadaForaRedes: {
         googleMeuNegocio: quadrante === 3 || quadrante === 4
-          ? `Otimização do Google Maps/Search com fotos, catálogo e automação de avaliações 5 estrelas após o atendimento.`
+          ? `Atualizar Google Maps/Search com fotos e serviços; solicitar avaliações honestas após o atendimento.`
           : `Presença no Google como suporte de autoridade, com prova social e páginas de destino alinhadas ao funil digital.`,
         whatsappEstrategico: quadrante === 1
           ? `Qualificação de leads no WhatsApp com roteiro consultivo e agendamento de reunião de fechamento.`
@@ -76,8 +76,8 @@ export function GERAR_MOCK_CAMPANHA_MODULO_3(diagnostico: DiagnosticoCompleto): 
   const tituloCampanha = tituloPorQuadrante[quadrante];
 
   const copyPersuasiva = giroRapido
-    ? `🔥 Você não precisa mais aceitar o segundo melhor em ${setor}. Se você valoriza qualidade e rapidez, a ${nome} preparou algo especial esta semana!\n\n✨ Ganhe atendimento prioritário e garanta condições exclusivas para as primeiras 20 pessoas hoje mesmo.\n\n👇 Toque no botão 'Saiba Mais' e garanta o seu antes que encerre!`
-    : `💡 Procurando segurança e resultados comprovados em ${setor}? A maioria dos profissionais comete o erro de focar no sintoma, não na causa raiz.\n\nNa ${nome}, aplicamos uma metodologia comprovada por dezenas de clientes para resolver este problema definitivamente.\n\n📅 Agende seu diagnóstico estratégico exclusivo agora mesmo link na bio.`;
+    ? `🔥 Você não precisa mais aceitar o segundo melhor em ${setor}. Se você valoriza qualidade e rapidez, a ${nome} preparou algo especial esta semana!\n\n✨ Conheça nosso atendimento e consulte as opções disponíveis para você.\n\n👇 Toque no botão 'Saiba Mais' e converse com nossa equipe!`
+    : `💡 Procurando segurança e resultados comprovados em ${setor}? A maioria dos profissionais comete o erro de focar no sintoma, não na causa raiz.\n\nNa ${nome}, oferecemos atendimento para entender sua necessidade e apresentar as opções adequadas.\n\n📅 Agende seu diagnóstico estratégico exclusivo agora mesmo link na bio.`;
 
   const hashtagsEstrategicas = [
     `#${setor.replace(/\s+/g, '')}`,
@@ -85,7 +85,7 @@ export function GERAR_MOCK_CAMPANHA_MODULO_3(diagnostico: DiagnosticoCompleto): 
     `#CrescimentoDeNegocios`,
     `#Estrategia2026`,
     `#LetsGrow`,
-    `#SucessoGarantido`
+    `#ConhecaNossoTrabalho`
   ];
 
   // Categorização visual centralizada (mesma fonte usada pela imagem estática, pelo fallback de
@@ -219,22 +219,7 @@ export async function SIMULAR_PROCESSAMENTO_COMPLETO_IA(
 ): Promise<ResultadoCompletoConsultoria> {
   const temGeminiReal = TEM_CHAVE_GEMINI_CONFIGURADA();
 
-  const etapas = [
-    { nome: "Classificando respostas Outros e calculando eixos PX/PY...", pct: 15 },
-    { nome: "Iniciando Sensoriamento de Mercado Local e Concorrentes...", pct: 35 },
-    { nome: "Mapeando quadrante estratégico (ciclo de venda × escala)...", pct: 55 },
-    { nome: temGeminiReal ? "Consultando API do Google Gemini (gemini-2.5-flash)..." : "Ancorando estratégias em Casos de Sucesso comprovados...", pct: 75 },
-    { nome: "Gerando Mocks de Criativos: Imagem, Copy e Roteiro de Vídeo...", pct: 90 },
-    { nome: "Estratégia Tripla e Dashboard de Performance Prontos!", pct: 100 }
-  ];
-
-  for (const step of etapas) {
-    if (notificarProgresso) {
-      notificarProgresso(step.nome, step.pct);
-    }
-    // Delay dinâmico para simular o processamento da IA
-    await new Promise((resolve) => setTimeout(resolve, 400));
-  }
+  notificarProgresso?.(temGeminiReal ? 'Diagnóstico classificado. Consultando referências na web…' : 'Diagnóstico classificado. Preparando hipóteses locais…', 20);
 
   // Tenta enriquecer o Sensoriamento de Mercado com IA real antes de gerar estratégia/campanha,
   // já que "casosDeSucessoAncorados" e "tendenciaPrincipal" alimentam a Estratégia de Oportunidade
@@ -244,7 +229,8 @@ export async function SIMULAR_PROCESSAMENTO_COMPLETO_IA(
     const sensoriamentoIa = await GERAR_SENSORIAMENTO_MERCADO_GEMINI(
       diagnostico.setor,
       diagnostico.nomeNegocio,
-      diagnostico.escopoGeografico
+      diagnostico.escopoGeografico,
+      diagnostico
     );
     if (sensoriamentoIa) {
       diagnosticoEnriquecido = {
@@ -254,13 +240,15 @@ export async function SIMULAR_PROCESSAMENTO_COMPLETO_IA(
     }
   }
 
-  const estrategias = GERAR_ESTRATEGIA_TRIPLA(diagnosticoEnriquecido);
+  notificarProgresso?.('Preparando campanha com o contexto do negócio…', 60);
+  let estrategias = GERAR_ESTRATEGIA_TRIPLA(diagnosticoEnriquecido);
   const campanhaMock = GERAR_MOCK_CAMPANHA_MODULO_3(diagnosticoEnriquecido);
 
   // Tenta enriquecer com IA real do Gemini se a chave estiver configurada
   if (temGeminiReal) {
     const geminiRes = await GERAR_COPY_PERSUASIVA_GEMINI(diagnosticoEnriquecido, campanhaMock.objetivoPrincipal);
     if (geminiRes) {
+      if (geminiRes.estrategias) estrategias = geminiRes.estrategias;
       campanhaMock.copyPersuasiva = geminiRes.copy;
       campanhaMock.hashtagsEstrategicas = geminiRes.hashtags;
       campanhaMock.promptImagemIa = geminiRes.promptImagem;
@@ -283,6 +271,7 @@ export async function SIMULAR_PROCESSAMENTO_COMPLETO_IA(
   // Salva no repositório de persistência do blueprint
   SALVAR_RESULTADO_CONSULTORIA_PERSISTENCIA(resultadoCompleto);
 
+  notificarProgresso?.('Plano pronto', 100);
   return resultadoCompleto;
 }
 

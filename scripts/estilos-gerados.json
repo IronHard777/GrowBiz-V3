@@ -1,0 +1,116 @@
+[
+  {
+    "slug": "img-estudio",
+    "prompt": "Studio product photography of a cobalt blue perfume bottle on a neutral ivory pedestal, precise softbox reflections, seamless background",
+    "arquivo": "src/assets/categorias/img-estudio-v2.webp",
+    "ferramenta": "image_gen (nativa)"
+  },
+  {
+    "slug": "img-lifestyle",
+    "prompt": "Candid lifestyle photograph of a woman using a fragrance at home near an open sunlit window, warm lived-in space",
+    "arquivo": "src/assets/categorias/img-lifestyle-v2.webp",
+    "ferramenta": "image_gen (nativa)"
+  },
+  {
+    "slug": "img-editorial",
+    "prompt": "Premium magazine editorial still life of a sculptural blue perfume bottle with dramatic diagonal shadows and art-directed red fabric",
+    "arquivo": "src/assets/categorias/img-editorial-v2.webp",
+    "ferramenta": "image_gen (nativa)"
+  },
+  {
+    "slug": "img-preto-e-branco",
+    "prompt": "Pure black and white portrait of a craftsperson, rich silver gelatin grain, strong chiaroscuro, absolutely no color",
+    "arquivo": "src/assets/categorias/img-preto-e-branco-v2.webp",
+    "ferramenta": "image_gen (nativa)"
+  },
+  {
+    "slug": "img-cores-vibrantes",
+    "prompt": "Bold vibrant commercial still life of cobalt perfume with saturated yellow pink and turquoise geometric props",
+    "arquivo": "src/assets/categorias/img-cores-vibrantes-v2.webp",
+    "ferramenta": "image_gen (nativa)"
+  },
+  {
+    "slug": "img-artesanal",
+    "prompt": "Close view of artisan hands shaping a ceramic vessel on pottery wheel, tactile clay and warm natural light",
+    "arquivo": "src/assets/categorias/img-artesanal-v2.webp",
+    "ferramenta": "image_gen (nativa)"
+  },
+  {
+    "slug": "img-minimalista",
+    "prompt": "Tiny elegant blue perfume bottle in a vast warm ivory background, exquisite minimalism and generous negative space",
+    "arquivo": "src/assets/categorias/img-minimalista-v2.webp",
+    "ferramenta": "image_gen (nativa)"
+  },
+  {
+    "slug": "vid-exibicao-produto",
+    "prompt": "Macro beauty shot of blue perfume bottle with fine water droplets, product demonstration video frame",
+    "arquivo": "src/assets/categorias/vid-exibicao-produto-v2.webp",
+    "ferramenta": "image_gen (nativa)"
+  },
+  {
+    "slug": "vid-revelacao-marca",
+    "prompt": "Luxury blue perfume silhouette emerging into a theatrical spotlight, mist and dramatic reveal",
+    "arquivo": "src/assets/categorias/vid-revelacao-marca-v2.webp",
+    "ferramenta": "image_gen (nativa)"
+  },
+  {
+    "slug": "vid-depoimento-analise",
+    "prompt": "Authentic friendly woman speaking directly to a smartphone camera, testimonial composition, natural daylight",
+    "arquivo": "src/assets/categorias/vid-depoimento-analise-v2.webp",
+    "ferramenta": "image_gen (nativa)"
+  },
+  {
+    "slug": "vid-equipe-atendimento",
+    "prompt": "Two professional hair salon staff warmly welcoming a client, mirrors and salon chairs, authentic service",
+    "arquivo": "src/assets/categorias/vid-equipe-atendimento-v2.webp",
+    "ferramenta": "image_gen (nativa)"
+  },
+  {
+    "slug": "vid-tutorial",
+    "prompt": "Overhead step by step demonstration hands wrapping a gift on organized work surface",
+    "arquivo": "src/assets/categorias/vid-tutorial-v2.webp",
+    "ferramenta": "image_gen (nativa)"
+  },
+  {
+    "slug": "vid-sazonal-promocao",
+    "prompt": "Festive wrapped gifts with ribbon confetti and holiday window lights, commercial seasonal promotion",
+    "arquivo": "src/assets/categorias/vid-sazonal-promocao-v2.webp",
+    "ferramenta": "image_gen (nativa)"
+  },
+  {
+    "slug": "vid-cinematografico",
+    "prompt": "Cinematic film still of a woman entering an elegant shop in rain at dusk, dramatic anamorphic light",
+    "arquivo": "src/assets/categorias/vid-cinematografico-v2.webp",
+    "ferramenta": "image_gen (nativa)"
+  },
+  {
+    "slug": "vid-dinamico",
+    "prompt": "Energetic sneaker closeup mid jump, colorful motion trails and dynamic tilted camera sports commercial",
+    "arquivo": "src/assets/categorias/vid-dinamico-v2.webp",
+    "ferramenta": "image_gen (nativa)"
+  },
+  {
+    "slug": "vid-anime",
+    "prompt": "Japanese anime frame of a young adult artisan in a luminous shop, expressive clean linework and cel shading",
+    "arquivo": "src/assets/categorias/vid-anime-v2.webp",
+    "ferramenta": "image_gen (nativa)"
+  },
+  {
+    "slug": "vid-pixel-art",
+    "prompt": "Authentic crisp 16 bit pixel art charming boutique storefront, strict pixel grid, limited retro palette",
+    "arquivo": "src/assets/categorias/vid-pixel-art-v2.webp",
+    "ferramenta": "image_gen (nativa)"
+  },
+  {
+    "slug": "vid-clipe-anos-80",
+    "prompt": "1980s music video frame with adult performer silhouette neon magenta cyan lights, VHS grain synthwave",
+    "arquivo": "src/assets/categorias/vid-clipe-anos-80-v2.webp",
+    "ferramenta": "image_gen (nativa)"
+  },
+  {
+    "slug": "vid-stop-motion",
+    "prompt": "Handmade stop motion scene of felt and clay shopkeeper in miniature shop, tactile fingerprints and paper props",
+    "arquivo": "src/assets/categorias/vid-stop-motion-v2.webp",
+    "ferramenta": "image_gen (nativa)"
+  }
+]

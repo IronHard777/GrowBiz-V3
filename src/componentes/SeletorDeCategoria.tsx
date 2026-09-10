@@ -25,7 +25,8 @@ export const SeletorDeCategoria: React.FC<PropriedadesSeletor> = ({ titulo, cate
         disabled={carregando}
         onClick={() => aoSelecionar(categoria)}
         title={categoria.nome}
-        className={`relative flex-shrink-0 w-[92px] h-[92px] rounded-xl overflow-hidden border-2 transition-all disabled:cursor-not-allowed group ${
+        aria-pressed={ativa}
+        className={`relative flex-shrink-0 w-[112px] h-[112px] rounded-xl overflow-hidden border-2 transition-all disabled:cursor-not-allowed group ${
           ativa
             ? 'border-blue-400 shadow-lg shadow-blue-500/30 ring-2 ring-blue-400/40'
             : 'border-slate-700 hover:border-slate-500 opacity-90 hover:opacity-100'
@@ -34,6 +35,8 @@ export const SeletorDeCategoria: React.FC<PropriedadesSeletor> = ({ titulo, cate
         {categoria.thumbnailUrl ? (
           <img
             src={categoria.thumbnailUrl}
+            loading="lazy"
+            decoding="async"
             alt={categoria.nome}
             className={`absolute inset-0 w-full h-full object-cover transition-transform duration-500 ${
               animarComZoom ? 'animar-ken-burns' : 'group-hover:scale-110'
@@ -51,7 +54,7 @@ export const SeletorDeCategoria: React.FC<PropriedadesSeletor> = ({ titulo, cate
           </div>
         )}
 
-        <span className="absolute bottom-1 left-1.5 right-1.5 text-[9px] font-mono font-bold text-white leading-tight text-left drop-shadow">
+        <span className="absolute bottom-1 left-1.5 right-1.5 text-[11px] font-semibold text-white leading-tight text-left drop-shadow">
           {categoria.nome}
         </span>
       </button>

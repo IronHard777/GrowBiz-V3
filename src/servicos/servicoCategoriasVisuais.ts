@@ -10,6 +10,7 @@ export type CategoriaVisual =
   | 'cafeteria'
   | 'juridico'
   | 'moda'
+  | 'salao'
   | 'estetica'
   | 'gastronomia'
   | 'jogos'
@@ -29,7 +30,7 @@ const IMAGEM_CURADA_GENERICA = 'https://images.unsplash.com/photo-1557804506-669
 
 const CATEGORIAS: Record<CategoriaVisual, DefinicaoCategoriaVisual> = {
   cafeteria: {
-    chaves: ['café', 'cafeteria', 'varejo', 'lanchonete', 'padaria'],
+    chaves: ['café', 'cafeteria', 'lanchonete', 'padaria'],
     promptInglesImagem: 'Delicious gourmet espresso coffee cup with rich crema, coffee beans, cozy specialty cafe ambiance, professional commercial photography, 8k',
     palavrasChaveImagemIa: 'delicious gourmet espresso coffee cup, coffee beans, cozy modern coffee shop ambiance, professional barista specialty cafe commercial photography',
     imagemCuradaUrl: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=1000&q=80'
@@ -46,11 +47,17 @@ const CATEGORIAS: Record<CategoriaVisual, DefinicaoCategoriaVisual> = {
     palavrasChaveImagemIa: 'stylish fashion boutique apparel clothes display, modern clothing retail store commercial photography',
     imagemCuradaUrl: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1000&q=80'
   },
-  estetica: {
-    chaves: ['estétic', 'estetic', 'salão', 'salao', 'beleza', 'barbearia'],
-    promptInglesImagem: 'Modern luxury spa aesthetics salon, professional skincare treatment, relaxing wellness ambiance photography, 8k',
-    palavrasChaveImagemIa: 'luxury spa beauty salon treatment, modern aesthetics studio, relaxing wellness commercial photography',
+  salao: {
+    chaves: ['salão', 'salao', 'cabeleir', 'cabelereir', 'hair', 'barbearia'],
+    promptInglesImagem: 'Professional hairdresser styling a client hair in a real hair salon with mirrors and salon chairs, natural commercial photography',
+    palavrasChaveImagemIa: 'hairdresser styling hair, hair salon chairs and mirrors, commercial photography',
     imagemCuradaUrl: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=1000&q=80'
+  },
+  estetica: {
+    chaves: ['estétic', 'estetic', 'beleza', 'skincare', 'spa'],
+    promptInglesImagem: 'Professional aesthetician providing a skincare treatment in a clean beauty clinic, natural commercial photography',
+    palavrasChaveImagemIa: 'professional skincare treatment, beauty clinic',
+    imagemCuradaUrl: IMAGEM_CURADA_GENERICA
   },
   gastronomia: {
     chaves: ['restaurante', 'comida', 'pizzaria', 'gastronomia'],
@@ -96,10 +103,11 @@ const CATEGORIAS: Record<CategoriaVisual, DefinicaoCategoriaVisual> = {
  * pela imagem estática, pelo player de vídeo e pelo fallback de geração de imagem.
  */
 export function IDENTIFICAR_CATEGORIA_VISUAL(...textos: string[]): CategoriaVisual {
-  const textoCompleto = textos.join(' ').toLowerCase();
-  for (const [categoria, definicao] of Object.entries(CATEGORIAS) as [CategoriaVisual, DefinicaoCategoriaVisual][]) {
-    if (definicao.chaves.some(chave => textoCompleto.includes(chave))) {
-      return categoria;
+  // Primeiro texto é o setor autorizado; o nome só ajuda se o setor não for reconhecido.
+  const normalizar = (texto: string) => texto.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  for (const texto of textos) {
+    for (const [categoria, definicao] of Object.entries(CATEGORIAS) as [CategoriaVisual, DefinicaoCategoriaVisual][]) {
+      if (definicao.chaves.some(chave => normalizar(texto).includes(normalizar(chave)))) return categoria;
     }
   }
   return 'generico';
