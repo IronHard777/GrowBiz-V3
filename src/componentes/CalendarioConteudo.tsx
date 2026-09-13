@@ -17,7 +17,9 @@ import {
   X,
   Share2,
   Sparkles,
-  ArrowRight
+  ArrowRight,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 interface PropriedadesCalendario {
@@ -178,10 +180,32 @@ export const CalendarioConteudo: React.FC<PropriedadesCalendario> = ({ diagnosti
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
-        <button className="gb-btn-ghost" onClick={() => setSemana(s => s - 1)}>← Semana anterior</button>
+        <button type="button" className="gb-btn-ghost flex items-center gap-1" onClick={() => setSemana(s => s - 1)}>
+          <ChevronLeft className="w-4 h-4" /><span>Semana anterior</span>
+        </button>
         <span>{inicio.toLocaleDateString('pt-BR')} a {new Date(fim.getTime() - 1).toLocaleDateString('pt-BR')}</span>
-        <button className="gb-btn-ghost" onClick={() => setSemana(0)}>Hoje</button>
-        <button className="gb-btn-ghost" onClick={() => setSemana(s => s + 1)}>Próxima semana →</button>
+        <button type="button" className="gb-btn-ghost" onClick={() => setSemana(0)}>Hoje</button>
+        <button type="button" className="gb-btn-ghost flex items-center gap-1" onClick={() => setSemana(s => s + 1)}>
+          <span>Próxima semana</span><ChevronRight className="w-4 h-4" />
+        </button>
+      </div>
+      <div data-gb-week-strip className="grid grid-cols-7 gap-2">
+        {Array.from({ length: 7 }).map((_, i) => {
+          const dia = new Date(inicio);
+          dia.setDate(inicio.getDate() + i);
+          const hoje = new Date();
+          const ehHoje = dia.toDateString() === hoje.toDateString();
+          const label = dia.toLocaleDateString('pt-BR', { weekday: 'short' });
+          return (
+            <div
+              key={i}
+              className={`rounded-xl border px-2 py-2 text-center ${ehHoje ? 'border-blue-400 bg-blue-500/10' : 'border-white/10 bg-slate-900/40'}`}
+            >
+              <div className="text-[10px] font-mono uppercase text-slate-400">{label}</div>
+              <div className="text-sm font-bold text-white">{dia.getDate()}</div>
+            </div>
+          );
+        })}
       </div>
       <p className="text-xs text-slate-400">Agendamento manual: abrir o canal não publica o conteúdo. Confirme a postagem na rede social antes de marcar como publicada.</p>
       <p className="text-xs text-slate-400">Use “Lembrete” para importar no seu calendário um alerta 30 minutos antes da postagem, inclusive com o app fechado.</p>

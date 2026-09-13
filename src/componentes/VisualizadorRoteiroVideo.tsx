@@ -176,7 +176,7 @@ export const VisualizadorRoteiroVideo: React.FC<PropriedadesRoteiro> = ({
         const vozEscolhida = selecionarVozParaGenero(generoVoz);
         if (vozEscolhida) u.voice = vozEscolhida;
         window.speechSynthesis.speak(u);
-      }, 120);
+      }, 180);
     } catch (e) {
       console.warn('Aviso na voz nativa:', e);
     }
@@ -517,9 +517,12 @@ export const VisualizadorRoteiroVideo: React.FC<PropriedadesRoteiro> = ({
               ? 'bg-blue-500/10 text-blue-400 border-blue-500/30'
               : 'bg-slate-800 text-slate-500 border-slate-700'
           }`}
-          title={urlVideoIa ? 'Áudio do clipe Veo' : (audioAtivo ? 'Narração PT-BR ativa' : 'Áudio mudo')}
+          title={urlVideoIa ? 'Áudio do clipe Veo' : (audioAtivo ? 'Com narração' : 'Sem voz')}
         >
-          {audioAtivo ? <Volume2 className="w-4 h-4 text-blue-400" /> : <VolumeX className="w-4 h-4" />}
+          <span className="flex items-center gap-1.5">
+            {audioAtivo ? <Volume2 className="w-4 h-4 text-blue-400" /> : <VolumeX className="w-4 h-4" />}
+            <span className="hidden sm:inline">{audioAtivo ? 'Com narração' : 'Sem voz'}</span>
+          </span>
         </button>
 
         <button

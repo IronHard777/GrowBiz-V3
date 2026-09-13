@@ -36,6 +36,7 @@ export const ModuloDiagnostico: React.FC<PropriedadesDiagnostico> = ({ usuario, 
   const [setor, setSetor] = useState<string>(usuario.setor || 'Cafeteria e Varejo');
   const [modeloOperacional, setModeloOperacional] = useState<ModeloOperacional>(usuario.modeloOperacional || 'Presencial');
   const [escopoGeografico, setEscopoGeografico] = useState<EscopoGeografico>(usuario.escopoGeografico || 'Local');
+  const [cidade, setCidade] = useState<string>(usuario.cidade || '');
 
   const [respostasFiltro, setRespostasFiltro] = useState<RespostasFiltroSetePerguntas>(RESPOSTAS_INICIAIS);
   const [perguntaAtualIdx, setPerguntaAtualIdx] = useState<number>(0);
@@ -43,7 +44,7 @@ export const ModuloDiagnostico: React.FC<PropriedadesDiagnostico> = ({ usuario, 
   const [enviando, setEnviando] = useState(false);
   const [erroFiltro, setErroFiltro] = useState<string | null>(null);
 
-  const perguntasList = OBTER_SETE_PERGUNTAS_ESTRATEGICAS(setor);
+  const perguntasList = OBTER_SETE_PERGUNTAS_ESTRATEGICAS(setor, nomeNegocio);
   const perguntaAtual = perguntasList[perguntaAtualIdx];
   const respostaAtual = OBTER_RESPOSTA_PERGUNTA(respostasFiltro, perguntaAtual?.id ?? 1);
 
@@ -141,26 +142,7 @@ export const ModuloDiagnostico: React.FC<PropriedadesDiagnostico> = ({ usuario, 
             </p>
           </div>
 
-          <div className="bg-slate-800/90 border border-slate-700 p-4 rounded-xl min-w-[240px] text-right sm:text-left">
-            <span className="text-[10px] text-slate-400 uppercase font-mono tracking-widest font-bold block mb-1">
-              Matriz PX / PY (ao vivo):
-            </span>
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className={`text-xs font-bold font-mono px-2.5 py-1 rounded ${
-                categoriaPrevia.quadrante === 1 || categoriaPrevia.quadrante === 4
-                  ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20 uppercase tracking-wider'
-                  : 'bg-blue-500 text-white shadow-md shadow-blue-500/20 uppercase tracking-wider'
-              }`}>
-                {FILTRO_COMPLETO(respostasFiltro) ? rotuloQuadrante(categoriaPrevia) : 'Responda às 7 perguntas'}
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-400 mt-2 font-mono">
-              Ciclo PX {categoriaPrevia.pontuacaoX.toFixed(1)} · Escala PY {categoriaPrevia.pontuacaoY.toFixed(1)}
-            </p>
-            <p className="text-[11px] text-slate-400 mt-1 line-clamp-2 leading-relaxed">
-              {FILTRO_COMPLETO(respostasFiltro) ? categoriaPrevia.justificativa : 'A classificação será concluída após suas respostas.'}
-            </p>
-          </div>
+          
         </div>
       </div>
 
@@ -217,16 +199,35 @@ export const ModuloDiagnostico: React.FC<PropriedadesDiagnostico> = ({ usuario, 
                 onChange={(e) => setEscopoGeografico(e.target.value as EscopoGeografico)}
                 className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500"
               >
-                <option value="Local">Local (Raio 5km / Bairro)</option>
+                <option value="Local">Local</option>
+                <option value="Metropolitana">Área metropolitana</option>
                 <option value="Regional">Regional (Estado)</option>
                 <option value="Nacional">Nacional (Brasil)</option>
                 <option value="Global">Global / Internacional</option>
               </select>
             </div>
+            {(escopoGeografico === 'Local' || escopoGeografico === 'Metropolitana') && (
+              <div className="p-3 bg-slate-800/80 rounded-xl border-l-4 border-emerald-500 border-slate-700 sm:col-span-2 lg:col-span-4">
+                <label className="block text-[10px] font-mono text-emerald-400 font-bold uppercase mb-1">Cidade</label>
+                <input
+                  type="text"
+                  required={escopoGeografico === 'Metropolitana'}
+                  value={cidade}
+                  onChange={(e) => setCidade(e.target.value)}
+                  placeholder="Ex: São Paulo, Campinas, BH..."
+                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500"
+                />
+                <p className="text-[10px] text-slate-500 mt-1 font-mono">
+                  {escopoGeografico === 'Metropolitana'
+                    ? 'Obrigatório para área metropolitana — melhora a assertividade da IA.'
+                    : 'Informe a cidade para refinar o sensoriamento local.'}
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
-        {!investigando && <button type="button" className="gb-btn w-full" disabled={!nomeNegocio.trim() || !setor.trim()} onClick={() => setInvestigando(true)}>Continuar para as 7 perguntas →</button>}
+        {!investigando && <button type="button" className="gb-btn w-full" disabled={!nomeNegocio.trim() || !setor.trim() || (escopoGeografico === 'Metropolitana' && !cidade.trim())} onClick={() => setInvestigando(true)}>Continuar para as 7 perguntas →</button>}
         {investigando && <>
         <div className="gb-panel p-6 shadow-xl space-y-6">
           <div className="flex items-center justify-between border-b border-slate-800 pb-4">
@@ -344,7 +345,29 @@ export const ModuloDiagnostico: React.FC<PropriedadesDiagnostico> = ({ usuario, 
 
         </div>
 
-        {erroFiltro && (
+        
+        <div data-gb-resumo-pos-filtro className="bg-slate-800/90 border border-slate-700 p-4 rounded-xl text-left">
+            <span className="text-[10px] text-slate-400 uppercase font-mono tracking-widest font-bold block mb-1">
+              Resumo da matriz (após as 7 perguntas):
+            </span>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className={`text-xs font-bold font-mono px-2.5 py-1 rounded ${
+                categoriaPrevia.quadrante === 1 || categoriaPrevia.quadrante === 4
+                  ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20 uppercase tracking-wider'
+                  : 'bg-blue-500 text-white shadow-md shadow-blue-500/20 uppercase tracking-wider'
+              }`}>
+                {FILTRO_COMPLETO(respostasFiltro) ? rotuloQuadrante(categoriaPrevia) : 'Responda às 7 perguntas'}
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400 mt-2 font-mono">
+              Ciclo PX {categoriaPrevia.pontuacaoX.toFixed(1)} · Escala PY {categoriaPrevia.pontuacaoY.toFixed(1)}
+            </p>
+            <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
+              {FILTRO_COMPLETO(respostasFiltro) ? categoriaPrevia.justificativa : 'A classificação será concluída após suas respostas.'}
+            </p>
+        </div>
+
+{erroFiltro && (
           <p className="text-center text-xs text-amber-400 font-mono">{erroFiltro}</p>
         )}
 

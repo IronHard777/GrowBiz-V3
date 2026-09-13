@@ -91,6 +91,19 @@ export const ModuloResultadosMocks: React.FC<PropriedadesResultados> = ({ result
     }
   };
 
+  const aoAbrirProposta = (proposta: PropostaCampanha) => {
+    setCampanhaAtual(prev => ({
+      ...prev,
+      tituloCampanha: proposta.titulo,
+      objetivoPrincipal: proposta.descricao,
+      copyPersuasiva: proposta.copy || proposta.descricao,
+      hashtagsEstrategicas: proposta.hashtags?.length ? proposta.hashtags : prev.hashtagsEstrategicas,
+      canalIdeal: proposta.plataforma,
+      chamadaParaAcao: proposta.chamadaParaAcao || prev.chamadaParaAcao
+    }));
+    setAbaAtiva('modulo3');
+  };
+
   const aoAdicionarPropostaAoKanban = (proposta: PropostaCampanha) => {
     CRIAR_EVENTO_CALENDARIO({
       id: `evt_${proposta.id}`,
@@ -99,8 +112,8 @@ export const ModuloResultadosMocks: React.FC<PropriedadesResultados> = ({ result
       dataHorario: new Date(Date.now() + 86400000).toISOString(),
       canal: proposta.plataforma as CanalPublicacao,
       status: 'rascunho',
-      copy: proposta.descricao,
-      hashtags: campanhaAtual.hashtagsEstrategicas,
+      copy: proposta.copy || proposta.descricao,
+      hashtags: proposta.hashtags?.length ? proposta.hashtags : campanhaAtual.hashtagsEstrategicas,
       criadoEm: new Date().toISOString()
     });
     setPropostasAdicionadasIds(prev => [...prev, proposta.id]);
@@ -115,7 +128,24 @@ export const ModuloResultadosMocks: React.FC<PropriedadesResultados> = ({ result
     { id: 'modulo4', label: 'Performance & Pivotagem', icone: <BarChart3 className="w-3.5 h-3.5" /> }
   ];
 
-  return (
+  const irProximaEtapa = () => {
+    const idx = TABS.findIndex(t => t.id === abaAtiva);
+    if (idx >= 0 && idx < TABS.length - 1) setAbaAtiva(TABS[idx + 1].id);
+  };
+
+  const BotaoProximaEtapa = () => {
+    const idx = TABS.findIndex(t => t.id === abaAtiva);
+    if (idx < 0 || idx >= TABS.length - 1) return null;
+    return (
+      <div className="pt-4 flex justify-end">
+        <button type="button" onClick={irProximaEtapa} className="gb-btn flex items-center gap-2">
+          <span>Próxima etapa</span>
+        </button>
+      </div>
+    );
+  };
+
+return (
     <div className="max-w-7xl mx-auto py-8 px-4 text-white space-y-8">
 
       {/* CABEÇALHO COM RESUMO DO DIAGNÓSTICO E DA MATRIZ */}
@@ -254,6 +284,7 @@ export const ModuloResultadosMocks: React.FC<PropriedadesResultados> = ({ result
           diagnostico={diagnostico}
           campanha={campanhaAtual}
           aoAdicionarAoKanban={aoAdicionarPropostaAoKanban}
+          aoAbrirProposta={aoAbrirProposta}
           idsJaAdicionados={propostasAdicionadasIds}
         />
       )}
@@ -272,6 +303,9 @@ export const ModuloResultadosMocks: React.FC<PropriedadesResultados> = ({ result
       {abaAtiva === 'modulo4' && (
         <PainelPerformance kpis={kpisSimulados} alerta={alertaPivotagem} aoSolicitarPivotagem={aplicarPivotagem} />
       )}
+
+      <BotaoProximaEtapa />
+
 
     </div>
   );

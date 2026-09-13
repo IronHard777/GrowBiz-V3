@@ -8,10 +8,11 @@ interface PropriedadesPropostas {
   diagnostico: DiagnosticoCompleto;
   campanha: MockCampanhaConteudo;
   aoAdicionarAoKanban: (proposta: PropostaCampanha) => void;
+  aoAbrirProposta: (proposta: PropostaCampanha) => void;
   idsJaAdicionados: string[];
 }
 
-export const ModuloPropostasCampanha: React.FC<PropriedadesPropostas> = ({ diagnostico, campanha, aoAdicionarAoKanban, idsJaAdicionados }) => {
+export const ModuloPropostasCampanha: React.FC<PropriedadesPropostas> = ({ diagnostico, campanha, aoAdicionarAoKanban, aoAbrirProposta, idsJaAdicionados }) => {
   const [propostas, setPropostas] = useState<PropostaCampanha[]>([]);
   const [carregando, setCarregando] = useState<boolean>(true);
 
@@ -63,6 +64,13 @@ export const ModuloPropostasCampanha: React.FC<PropriedadesPropostas> = ({ diagn
                   </div>
                 </div>
                 <button
+                    type="button"
+                    onClick={() => aoAbrirProposta(proposta)}
+                    className="gb-btn w-full flex items-center justify-center gap-2 mb-2"
+                  >
+                    <span>Abrir</span>
+                  </button>
+                  <button
                   onClick={() => aoAdicionarAoKanban(proposta)}
                   disabled={jaAdicionada}
                   className={jaAdicionada ? 'gb-btn-ghost w-full flex items-center justify-center gap-2' : 'gb-btn w-full flex items-center justify-center gap-2'}

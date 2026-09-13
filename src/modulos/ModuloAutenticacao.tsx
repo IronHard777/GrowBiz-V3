@@ -16,6 +16,7 @@ export const ModuloAutenticacao: React.FC<PropriedadesAutenticacao> = ({ aoAuten
   const [setor, setSetor] = useState<string>('Cafeteria e Varejo');
   const [modeloOperacional, setModeloOperacional] = useState<ModeloOperacional>('Presencial');
   const [escopoGeografico, setEscopoGeografico] = useState<EscopoGeografico>('Local');
+  const [cidade, setCidade] = useState<string>('');
 
   const processarLoginOuCadastro = (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,6 +28,7 @@ export const ModuloAutenticacao: React.FC<PropriedadesAutenticacao> = ({ aoAuten
       setor: setor || 'Varejo e Serviços',
       modeloOperacional,
       escopoGeografico,
+      cidade: cidade.trim() || undefined,
       dataCriacao: new Date().toISOString()
     };
     SALVAR_SESSAO_USUARIO(novoUsuario);
@@ -203,11 +205,25 @@ export const ModuloAutenticacao: React.FC<PropriedadesAutenticacao> = ({ aoAuten
                 className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500"
               >
                 <option value="Local">Local</option>
+                <option value="Metropolitana">Área metropolitana</option>
                 <option value="Regional">Regional</option>
                 <option value="Nacional">Nacional</option>
                 <option value="Global">Global</option>
               </select>
             </div>
+            {(escopoGeografico === 'Local' || escopoGeografico === 'Metropolitana') && (
+              <div>
+                <label className="block text-[10px] font-mono uppercase text-slate-400 mb-1">Cidade</label>
+                <input
+                  type="text"
+                  required={escopoGeografico === 'Metropolitana'}
+                  value={cidade}
+                  onChange={(e) => setCidade(e.target.value)}
+                  placeholder="Ex: São Paulo..."
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500"
+                />
+              </div>
+            )}
           </div>
 
           <button

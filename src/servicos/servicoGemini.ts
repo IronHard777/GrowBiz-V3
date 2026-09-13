@@ -378,9 +378,15 @@ REGRAS RÍGIDAS:
 Retorne APENAS um JSON válido (sem marcadores de código markdown) no formato exato:
 {
   "propostas": [
-    { "plataforma": "Instagram Reels", "titulo": "...", "descricao": "...", "aderenciaPercentual": 92 },
-    { "plataforma": "TikTok", "titulo": "...", "descricao": "...", "aderenciaPercentual": 85 },
-    { "plataforma": "Google Meu Negócio", "titulo": "...", "descricao": "...", "aderenciaPercentual": 78 }
+    {
+      "plataforma": "Instagram Reels|TikTok|Instagram Feed|WhatsApp Status|Google Meu Negócio",
+      "titulo": "string",
+      "descricao": "string curta",
+      "aderenciaPercentual": 0,
+      "copy": "texto pronto para publicar",
+      "hashtags": ["#tag"],
+      "chamadaParaAcao": "CTA curto"
+    }
   ]
 }`;
 
@@ -397,11 +403,14 @@ Retorne APENAS um JSON válido (sem marcadores de código markdown) no formato e
     if (!Array.isArray(parsed.propostas) || parsed.propostas.length === 0) return null;
 
     return parsed.propostas.map((p: any, idx: number) => ({
-      id: `prop_${Date.now()}_${idx}`,
-      plataforma: PLATAFORMAS_VALIDAS.includes(p.plataforma) ? p.plataforma : 'Instagram Reels',
-      titulo: p.titulo || 'Proposta de Campanha',
-      descricao: p.descricao || '',
-      aderenciaPercentual: typeof p.aderenciaPercentual === 'number' ? p.aderenciaPercentual : 75
+      id: `prop_gemini_${Date.now()}_${idx}`,
+      plataforma: p.plataforma,
+      titulo: p.titulo,
+      descricao: p.descricao,
+      aderenciaPercentual: Number(p.aderenciaPercentual) || 80,
+      copy: typeof p.copy === 'string' ? p.copy : undefined,
+      hashtags: Array.isArray(p.hashtags) ? p.hashtags : undefined,
+      chamadaParaAcao: typeof p.chamadaParaAcao === 'string' ? p.chamadaParaAcao : undefined
     }));
   } catch (error) {
     console.warn("Aviso ao gerar propostas de campanha via Gemini (fallback ativado):", error);

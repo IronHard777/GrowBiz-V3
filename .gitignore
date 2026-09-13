@@ -10,3 +10,10 @@ coverage/
 .env
 .env.local
 
+
+.scratch/
+.site-publish/
+.antigravity/
+.cursor/
+.openai/
+

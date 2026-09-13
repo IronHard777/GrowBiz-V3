@@ -156,27 +156,41 @@ export function GERAR_MOCK_CAMPANHA_MODULO_3(diagnostico: DiagnosticoCompleto): 
 /** Fallback local (sem IA) para a tela de Propostas de Campanha — usado se o Gemini não estiver configurado. */
 export function GERAR_PROPOSTAS_CAMPANHA_FALLBACK(diagnostico: DiagnosticoCompleto): PropostaCampanha[] {
   const setor = diagnostico.setor;
+  const nome = diagnostico.nomeNegocio;
+  const cidade = diagnostico.cidade?.trim();
+  const local = cidade ? ` em ${cidade}` : '';
   return [
     {
       id: `prop_${Date.now()}_0`,
       plataforma: 'Instagram Reels',
-      titulo: 'Carrossel — Prova Social',
-      descricao: `Depoimentos de clientes reais de ${setor} combinados com antes/depois, foco total em conversão.`,
-      aderenciaPercentual: 92
+      titulo: `${nome}: prova social em Reels`,
+      descricao: `Depoimentos e antes/depois de clientes de ${setor}${local}, com foco em conversão.`,
+      aderenciaPercentual: 92,
+      copy: `Você ainda está em dúvida sobre ${setor}?
+
+No ${nome}${local}, quem já passou por aqui conta o resultado de verdade.\n\n👉 Salva este Reels e chama no WhatsApp para garantir seu horário.`,
+      hashtags: ['#GrowBiz', `#${setor.replace(/\s+/g, '')}`, '#ProvaSocial', '#Reels'],
+      chamadaParaAcao: 'Chamar no WhatsApp agora'
     },
     {
       id: `prop_${Date.now()}_1`,
       plataforma: 'TikTok',
-      titulo: 'Vídeo — Bastidores',
-      descricao: `Formato vertical curto mostrando o dia a dia de ${diagnostico.nomeNegocio}, tom autêntico e descontraído.`,
-      aderenciaPercentual: 85
+      titulo: `${nome}: bastidores no TikTok`,
+      descricao: `Formato vertical curto do dia a dia de ${nome}, tom autêntico.`,
+      aderenciaPercentual: 85,
+      copy: `Um dia no ${nome} ✨\n\nBastidores reais de ${setor}${local}.\n\nSegue pra ver a rotina e as novidades da semana.`,
+      hashtags: ['#GrowBiz', '#TikTok', `#${nome.replace(/\s+/g, '')}`, '#Bastidores'],
+      chamadaParaAcao: 'Seguir e comentar “EU QUERO”'
     },
     {
       id: `prop_${Date.now()}_2`,
       plataforma: 'Google Meu Negócio',
-      titulo: 'Anúncio — Remarketing Local',
-      descricao: `Reengaja clientes que já pesquisaram por ${setor} na região com uma oferta segmentada.`,
-      aderenciaPercentual: 78
+      titulo: `${nome}: oferta local no Google`,
+      descricao: `Reengaja quem pesquisou ${setor}${local} com oferta objetiva.`,
+      aderenciaPercentual: 78,
+      copy: `${nome}${local} — oferta da semana para quem busca ${setor} agora.\n\nReserve pelo Google ou WhatsApp e garanta prioridade no atendimento.`,
+      hashtags: ['#GrowBiz', '#GoogleMeuNegocio', '#OfertaLocal'],
+      chamadaParaAcao: 'Reservar pelo Google'
     }
   ];
 }

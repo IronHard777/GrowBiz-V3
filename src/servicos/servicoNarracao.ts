@@ -1,12 +1,13 @@
 import { TomNarracao, GeneroVoz } from '../tipos';
 
 /** Ajustes de ritmo/timbre por tom de narração, aplicados sobre a mesma voz do navegador. */
+/** Ritmo mais próximo de fala humana; a Web Speech API ainda limita o quão natural soa. */
 export const PARAMETROS_TOM: Record<TomNarracao, { rate: number; pitch: number }> = {
-  calma: { rate: 0.85, pitch: 0.92 },
-  agitada: { rate: 1.2, pitch: 1.08 },
-  seria: { rate: 0.88, pitch: 0.85 },
-  empolgante: { rate: 1.1, pitch: 1.15 },
-  energetica: { rate: 1.22, pitch: 1.05 }
+  calma: { rate: 0.9, pitch: 0.95 },
+  agitada: { rate: 1.08, pitch: 1.05 },
+  seria: { rate: 0.88, pitch: 0.9 },
+  empolgante: { rate: 1.05, pitch: 1.08 },
+  energetica: { rate: 1.1, pitch: 1.02 }
 };
 
 export const ROTULO_TOM: Record<TomNarracao, string> = {

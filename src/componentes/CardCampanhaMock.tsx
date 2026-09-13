@@ -150,22 +150,7 @@ export const CardCampanhaMock: React.FC<PropriedadesCampanha> = ({
             )}
           </div>
 
-          {/* PROMPT UTILIZADO PARA GERAR A IMAGEM */}
-          <div className="mt-4 pt-4 border-t border-slate-800">
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400">Prompt da Imagem (IA):</span>
-              <button
-                onClick={copiarPromptImagem}
-                className="text-[10px] font-mono text-blue-400 hover:underline flex items-center gap-1"
-              >
-                {promptCopiado ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                {promptCopiado ? 'Copiado!' : 'Copiar Prompt'}
-              </button>
-            </div>
-            <p className="text-[11px] font-mono text-slate-400 bg-slate-900 p-2.5 rounded-lg border border-slate-800 line-clamp-2">
-              "{promptAplicado}"
-            </p>
-          </div>
+
         </div>
 
         {/* COLUNA DA COPY PERSUASIVA & HASHTAGS */}

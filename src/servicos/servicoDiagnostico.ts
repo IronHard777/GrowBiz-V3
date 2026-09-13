@@ -116,29 +116,30 @@ const PERGUNTAS_BASE = (): PerguntaEstrategica[] => [
   }
 ];
 
-export function OBTER_SETE_PERGUNTAS_ESTRATEGICAS(setor: string): PerguntaEstrategica[] {
+export function OBTER_SETE_PERGUNTAS_ESTRATEGICAS(setor: string, nomeNegocio = ''): PerguntaEstrategica[] {
   const perguntas = PERGUNTAS_BASE();
   const texto = normalizarTexto(setor);
   const salao = /salao|cabeleir|cabelereir|barbear|hair/.test(texto);
   const servico = salao || /servic|consult|advoc|clinic|estetic|oficina|educacao|contab/.test(texto);
   const gastronomia = /restaurante|cafeteria|padaria|gastronomia|pizzaria/.test(texto);
   const oferta = salao ? 'atendimento de cabelo' : servico ? 'serviço' : gastronomia ? 'pedido' : 'produto';
-  perguntas[0].pergunta = `Quanto tempo o cliente leva para decidir pelo ${oferta} em ${setor}?`;
+  const marca = (nomeNegocio || '').trim() || 'seu negócio';
+  perguntas[0].pergunta = `Em ${marca}, quanto tempo o cliente leva para decidir pelo ${oferta} em ${setor}?`;
   perguntas[0].opcoes[0].rotulo = salao ? 'No mesmo dia, para corte, escova ou manutenção' : 'No mesmo dia ou em poucas horas';
   perguntas[0].opcoes[1].rotulo = salao ? 'Até uma semana, comparando horários e profissionais' : 'Entre 1 e 7 dias, comparando opções';
   perguntas[0].opcoes[2].rotulo = salao ? 'Semanas, para uma transformação ou tratamento planejado' : 'Semanas ou meses, após avaliação detalhada';
-  perguntas[1].pergunta = `O que seu cliente mais busca ao escolher seu ${oferta}?`;
+  perguntas[1].pergunta = `O que o cliente de ${marca} mais busca ao escolher seu ${oferta}?`;
   if (salao) {
     perguntas[1].opcoes[0].rotulo = 'Cuidar do visual com praticidade e horário disponível';
     perguntas[1].opcoes[1].rotulo = 'Manter o cabelo bem cuidado com preço acessível';
     perguntas[1].opcoes[2].rotulo = 'Confiar em um especialista para coloração ou transformação';
   }
-  perguntas[2].pergunta = `Qual é o valor médio pago por ${oferta}?`;
-  perguntas[4].pergunta = `Qual é o principal diferencial de ${setor} no seu negócio?`;
+  perguntas[2].pergunta = `Qual é o valor médio pago por ${oferta} em ${marca}?`;
+  perguntas[4].pergunta = `Qual é o principal diferencial de ${setor} no negócio ${marca}?`;
   perguntas[4].opcoes[1].rotulo = servico ? 'Qualidade consistente e clientes que retornam' : 'Qualidade e disponibilidade dos produtos mais procurados';
-  perguntas[5].pergunta = servico ? 'Quantos novos atendimentos sua equipe consegue absorver?' : 'Quanto sua operação consegue crescer sem perder qualidade?';
+  perguntas[5].pergunta = servico ? `Em ${marca}, quantos novos atendimentos sua equipe consegue absorver?` : `Em ${marca}, quanto sua operação consegue crescer sem perder qualidade?`;
   perguntas[6].opcoes[0].rotulo = servico ? 'Preencher os horários disponíveis da semana' : gastronomia ? 'Aumentar os pedidos da semana' : 'Girar o estoque e promover um produto da semana';
-  perguntas[6].subtexto = `Defina a prioridade. Em Outros, indique o ${oferta} que quer promover e eventuais condições reais.`;
+  perguntas[6].subtexto = `Prioridade de ${marca}. Em Outros, indique o ${oferta} que quer promover e eventuais condições reais.`;
   return perguntas;
 }
 
@@ -355,13 +356,14 @@ export async function CLASSIFICAR_RESPOSTAS_OUTROS(
  */
 export function GERAR_SENSORIAMENTO_MERCADO(
   setor: string,
-  escopo: EscopoGeografico
+  escopo: EscopoGeografico,
+  cidade?: string
 ): SensoriamentoMercado {
   return {
     concorrentesLocaisMapeados: 0,
     statusPesquisa: 'indisponivel',
     fontes: [],
-    tendenciaPrincipal: `Hipótese para testar em ${setor}: destacar o diferencial e facilitar o contato.`,
+    tendenciaPrincipal: `Hipótese para testar em ${setor}${cidade?.trim() ? ` em ${cidade.trim()}` : ''} (escopo ${escopo}): destacar o diferencial e facilitar o contato.`,
     volumeBuscaRelativo: 'Volume de buscas não consultado.',
     casosDeSucessoAncorados: []
   };
@@ -375,10 +377,11 @@ export function CRIAR_DIAGNOSTICO_COMPLETO(
   setor: string,
   modeloOperacional: ModeloOperacional,
   escopoGeografico: EscopoGeografico,
-  respostasFiltro: RespostasFiltroSetePerguntas
+  respostasFiltro: RespostasFiltroSetePerguntas,
+  cidade?: string
 ): DiagnosticoCompleto {
   const categoriaModelo = CALCULAR_CATEGORIA_MODELO_NEGOCIO(respostasFiltro, setor);
-  const sensoriamento = GERAR_SENSORIAMENTO_MERCADO(setor, escopoGeografico);
+  const sensoriamento = GERAR_SENSORIAMENTO_MERCADO(setor, escopoGeografico, cidade);
 
   return {
     id: `diag_${Date.now()}`,
@@ -387,6 +390,7 @@ export function CRIAR_DIAGNOSTICO_COMPLETO(
     setor,
     modeloOperacional,
     escopoGeografico,
+    cidade: cidade?.trim() || undefined,
     tipoDecisaoCalculado: categoriaModelo.tipoDecisao,
     justificativaMatriz: categoriaModelo.justificativa,
     categoriaModelo,

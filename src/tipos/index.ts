@@ -3,7 +3,7 @@
  */
 
 export type ModeloOperacional = 'Presencial' | 'Online' | 'Híbrido';
-export type EscopoGeografico = 'Local' | 'Regional' | 'Nacional' | 'Global';
+export type EscopoGeografico = 'Local' | 'Metropolitana' | 'Regional' | 'Nacional' | 'Global';
 export type TipoMatrizDecisao = 'RAPIDA' | 'ELABORADA';
 export type QuadranteModeloNegocio = 1 | 2 | 3 | 4;
 
@@ -50,6 +50,7 @@ export interface PerfilUsuario {
   setor: string;
   modeloOperacional: ModeloOperacional;
   escopoGeografico: EscopoGeografico;
+  cidade?: string;
   dataCriacao: string;
 }
 
@@ -85,6 +86,7 @@ export interface DiagnosticoCompleto {
   setor: string;
   modeloOperacional: ModeloOperacional;
   escopoGeografico: EscopoGeografico;
+  cidade?: string;
   tipoDecisaoCalculado: TipoMatrizDecisao;
   justificativaMatriz: string;
   categoriaModelo: CategoriaModeloNegocio;
@@ -171,6 +173,9 @@ export interface PropostaCampanha {
   titulo: string;
   descricao: string;
   aderenciaPercentual: number;
+  copy?: string;
+  hashtags?: string[];
+  chamadaParaAcao?: string;
 }
 
 export type StatusEventoCalendario = 'agendado' | 'publicado' | 'rascunho';
