@@ -119,22 +119,40 @@ export const CardCampanhaMock: React.FC<PropriedadesCampanha> = ({
                 </div>
               )}
 
-              <img
-                src={imagemIaUrl || undefined}
-                alt={campanha.tituloCampanha}
-                onLoad={aoCarregarImagem}
-                onError={aoErroImagem}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-              />
+              {!imagemIaUrl && !carregandoImagem ? (
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 gap-2">
+                  <span className="text-xs font-mono font-bold text-slate-300 uppercase tracking-wider">Quadro vazio</span>
+                  <span className="text-[11px] text-slate-500 max-w-[220px] leading-relaxed">
+                    Gere a imagem com IA ou escolha Foto Setor. Nenhuma foto de estoque é carregada automaticamente.
+                  </span>
+                  <button
+                    type="button"
+                    onClick={regenerarImagemIa}
+                    className="mt-2 px-3 py-1.5 rounded-lg bg-blue-500 hover:bg-blue-400 text-white text-[10px] font-mono font-bold uppercase tracking-wider"
+                  >
+                    Gerar imagem com IA
+                  </button>
+                </div>
+              ) : (
+                <img
+                  src={imagemIaUrl || undefined}
+                  alt={campanha.tituloCampanha}
+                  onLoad={aoCarregarImagem}
+                  onError={aoErroImagem}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+              )}
 
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-80 pointer-events-none" />
+              {imagemIaUrl && <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-80 pointer-events-none" />}
               
-              <div className="absolute bottom-3 left-3 right-3 p-3 bg-slate-900/95 backdrop-blur-md rounded-lg border border-slate-700 text-xs pointer-events-none">
-                <span className="text-[10px] text-blue-400 font-bold block uppercase tracking-widest font-mono">
-                  Chamada em Destaque
-                </span>
-                <p className="font-bold text-white mt-0.5">{campanha.chamadaParaAcao}</p>
-              </div>
+              {imagemIaUrl && (
+                <div className="absolute bottom-3 left-3 right-3 p-3 bg-slate-900/95 backdrop-blur-md rounded-lg border border-slate-700 text-xs pointer-events-none">
+                  <span className="text-[10px] text-blue-400 font-bold block uppercase tracking-widest font-mono">
+                    Chamada em Destaque
+                  </span>
+                  <p className="font-bold text-white mt-0.5">{campanha.chamadaParaAcao}</p>
+                </div>
+              )}
             </div>
 
             {/* BOTAO PARA RE-GERAR NOVA IMAGEM COM IA */}

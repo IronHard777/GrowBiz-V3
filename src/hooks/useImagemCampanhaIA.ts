@@ -6,17 +6,17 @@ import { IDENTIFICAR_CATEGORIA_VISUAL, OBTER_DEFINICAO_CATEGORIA_VISUAL } from '
 import { CategoriaEstilo } from '../servicos/servicoCategoriasEstilo';
 
 /**
- * Resolve a imagem visual da campanha (real via Imagen 3, ou curada por categoria como fallback)
- * em um único lugar. Antes, CardCampanhaMock e VisualizadorRoteiroVideo resolviam suas próprias
- * imagens de forma independente — o player de vídeo nunca via a imagem real gerada pela IA,
- * apenas um banco de fotos fixo próprio com só 2 categorias.
+ * Resolve a imagem visual da campanha.
+ * Após o diagnóstico o quadro começa vazio — sem Unsplash automático.
+ * Só carrega imagem ao gerar com IA (ou ao escolher explicitamente "Foto Setor").
  */
 export function useImagemCampanhaIA(campanha: MockCampanhaConteudo, diagnostico: DiagnosticoCompleto) {
   const [erro, setErro] = useState<string | null>(null);
   const [imagemUrl, setImagemUrl] = useState<string>('');
-  const [carregando, setCarregando] = useState<boolean>(true);
-  const [modo, setModo] = useState<'ia' | 'curada'>('curada');
+  const [carregando, setCarregando] = useState<boolean>(false);
+  const [modo, setModo] = useState<'ia' | 'curada'>('ia');
   const [semente, setSemente] = useState<number>(() => Math.floor(Math.random() * 10000));
+  const [pedidoGeracao, setPedidoGeracao] = useState<number>(0);
   const [estiloSelecionado, setEstiloSelecionado] = useState<CategoriaEstilo | null>(null);
 
   const categoria = IDENTIFICAR_CATEGORIA_VISUAL(diagnostico.setor, diagnostico.nomeNegocio);
@@ -25,44 +25,70 @@ export function useImagemCampanhaIA(campanha: MockCampanhaConteudo, diagnostico:
 
   useEffect(() => {
     let ativo = true;
-    setCarregando(true);
-    if (modo === 'ia') setErro(null);
 
-    if (modo === 'ia') {
-      GERAR_IMAGEM_IMAGEN3(promptAplicado).then(imgBase64 => {
-        if (!ativo) return;
-        if (imgBase64) {
-          setImagemUrl(imgBase64);
-        } else {
-          setImagemUrl(definicaoCategoria.imagemCuradaUrl);
-          setModo('curada');
-          setErro('A IA não retornou uma imagem. Exibindo uma foto de referência do setor.');
-        }
-        setCarregando(false);
-      });
-    } else {
-      setImagemUrl(definicaoCategoria.imagemCuradaUrl);
+    if (modo === 'curada') {
       setCarregando(false);
+      setImagemUrl(definicaoCategoria.imagemCuradaUrl);
+      return () => {
+        ativo = false;
+      };
     }
+
+    // Modo IA: sem pedido ainda → quadro vazio
+    if (pedidoGeracao === 0) {
+      setCarregando(false);
+      setImagemUrl('');
+      return () => {
+        ativo = false;
+      };
+    }
+
+    setCarregando(true);
+    setErro(null);
+
+    GERAR_IMAGEM_IMAGEN3(promptAplicado).then(imgBase64 => {
+      if (!ativo) return;
+      if (imgBase64) {
+        setImagemUrl(imgBase64);
+      } else {
+        setImagemUrl('');
+        setErro('A IA não retornou uma imagem. Tente gerar novamente.');
+      }
+      setCarregando(false);
+    });
 
     return () => {
       ativo = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [promptAplicado, semente, modo, definicaoCategoria.imagemCuradaUrl]);
+  }, [promptAplicado, semente, modo, pedidoGeracao, definicaoCategoria.imagemCuradaUrl]);
 
-  const regenerar = () => setSemente(Math.floor(Math.random() * 10000));
+  const regenerar = () => {
+    setModo('ia');
+    setPedidoGeracao(n => n + 1);
+    setSemente(Math.floor(Math.random() * 10000));
+  };
 
   const aoErroImagem = () => {
-    setImagemUrl(definicaoCategoria.imagemCuradaUrl);
+    setImagemUrl('');
     setErro('Não foi possível carregar a imagem. Tente gerar uma nova versão.');
-    setModo('curada');
     setCarregando(false);
   };
 
   const selecionarEstilo = (novoEstilo: CategoriaEstilo) => {
     setEstiloSelecionado(prev => (prev?.id === novoEstilo.id ? null : novoEstilo));
     setModo('ia');
+    setPedidoGeracao(n => n + 1);
+    setSemente(Math.floor(Math.random() * 10000));
+  };
+
+  const setModoComPedido = (novo: 'ia' | 'curada') => {
+    setModo(novo);
+    if (novo === 'ia' && pedidoGeracao === 0) {
+      // Usuário escolheu IA Generativa explicitamente → dispara geração
+      setPedidoGeracao(1);
+      setSemente(Math.floor(Math.random() * 10000));
+    }
   };
 
   return {
@@ -71,7 +97,7 @@ export function useImagemCampanhaIA(campanha: MockCampanhaConteudo, diagnostico:
     erro,
     carregando,
     modo,
-    setModo,
+    setModo: setModoComPedido,
     regenerar,
     aoErroImagem,
     aoCarregarImagem: () => undefined,

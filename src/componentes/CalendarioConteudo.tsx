@@ -8,6 +8,16 @@ import {
   EXCLUIR_EVENTO_CALENDARIO
 } from '../servicos/servicoPersistencia';
 import {
+  OBTER_SESSAO_INSTAGRAM,
+  CONECTAR_INSTAGRAM_OAUTH,
+  LIMPAR_SESSAO_INSTAGRAM,
+  PUBLICAR_NO_INSTAGRAM,
+  VERIFICAR_META_CONFIGURADO,
+  CANAL_INSTAGRAM,
+  TIPO_MIDIA_DO_CANAL,
+  SessaoInstagram
+} from '../servicos/servicoInstagram';
+import {
   LayoutGrid,
   Plus,
   Clock,
@@ -19,7 +29,8 @@ import {
   Sparkles,
   ArrowRight,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Instagram
 } from 'lucide-react';
 
 interface PropriedadesCalendario {
@@ -54,6 +65,10 @@ const PROXIMO_STATUS: Record<StatusEventoCalendario, StatusEventoCalendario | nu
 
 export const CalendarioConteudo: React.FC<PropriedadesCalendario> = ({ diagnosticoId, sinalDeAtualizacao }) => {
   const [eventos, setEventos] = useState<EventoCalendarioConteudo[]>([]);
+  const [sessaoIg, setSessaoIg] = useState<SessaoInstagram | null>(() => OBTER_SESSAO_INSTAGRAM());
+  const [metaConfigurado, setMetaConfigurado] = useState<boolean>(false);
+  const [publicandoId, setPublicandoId] = useState<string | null>(null);
+  const [msgIg, setMsgIg] = useState<string | null>(null);
   const [modalAberto, setModalAberto] = useState<boolean>(false);
   const [eventoParaEditar, setEventoParaEditar] = useState<EventoCalendarioConteudo | null>(null);
 
@@ -75,6 +90,7 @@ export const CalendarioConteudo: React.FC<PropriedadesCalendario> = ({ diagnosti
   const [status, setStatus] = useState<StatusEventoCalendario>('rascunho');
   const [copy, setCopy] = useState<string>('');
   const [hashtags, setHashtags] = useState<string>('#GrowBiz #Estrategia2026');
+  const [imagemUrl, setImagemUrl] = useState<string>('');
 
   const recarregarEventos = () => {
     const lista = OBTER_EVENTOS_CALENDARIO();
@@ -93,6 +109,7 @@ export const CalendarioConteudo: React.FC<PropriedadesCalendario> = ({ diagnosti
     setStatus('rascunho');
     setCopy('');
     setHashtags('#GrowBiz #Vendas #LetsGrow');
+    setImagemUrl('');
     setModalAberto(true);
   };
 
@@ -104,6 +121,7 @@ export const CalendarioConteudo: React.FC<PropriedadesCalendario> = ({ diagnosti
     setStatus(evt.status);
     setCopy(evt.copy);
     setHashtags(evt.hashtags.join(' '));
+    setImagemUrl(evt.imagemUrl || '');
     setModalAberto(true);
   };
 
@@ -119,6 +137,7 @@ export const CalendarioConteudo: React.FC<PropriedadesCalendario> = ({ diagnosti
         canal,
         status,
         copy,
+        imagemUrl: imagemUrl.trim() || undefined,
         hashtags: tagsArray
       });
     } else {
@@ -130,7 +149,8 @@ export const CalendarioConteudo: React.FC<PropriedadesCalendario> = ({ diagnosti
         canal,
         status,
         copy,
-        hashtags: tagsArray,
+        imagemUrl: imagemUrl.trim() || undefined,
+      hashtags: tagsArray,
         criadoEm: new Date().toISOString()
       });
     }
@@ -152,6 +172,60 @@ export const CalendarioConteudo: React.FC<PropriedadesCalendario> = ({ diagnosti
     ATUALIZAR_EVENTO_CALENDARIO({ ...evt, status: proximo });
     recarregarEventos();
   };
+
+  useEffect(() => {
+    VERIFICAR_META_CONFIGURADO().then(r => setMetaConfigurado(r.configurado)).catch(() => setMetaConfigurado(false));
+  }, []);
+
+  const conectarInstagram = async () => {
+    setMsgIg(null);
+    try {
+      if (!metaConfigurado) {
+        setMsgIg('Configure META_APP_ID, META_APP_SECRET e META_REDIRECT_URI no Vercel (veja docs/INSTAGRAM.md).');
+        return;
+      }
+      const sessao = await CONECTAR_INSTAGRAM_OAUTH();
+      setSessaoIg(sessao);
+      setMsgIg('Conectado: @' + (sessao.igUsername || sessao.pageName || 'Instagram'));
+    } catch (e) {
+      setMsgIg(e instanceof Error ? e.message : 'Falha ao conectar Instagram.');
+    }
+  };
+
+  const desconectarInstagram = () => {
+    LIMPAR_SESSAO_INSTAGRAM();
+    setSessaoIg(null);
+    setMsgIg('Conta Instagram desconectada.');
+  };
+
+  const publicarNoInstagram = async (evt: EventoCalendarioConteudo) => {
+    setMsgIg(null);
+    if (!CANAL_INSTAGRAM(evt.canal)) return;
+    const mediaUrl = (evt.imagemUrl || '').trim();
+    if (!/^https:\/\//i.test(mediaUrl)) {
+      setMsgIg('Para publicar, edite o card e cole uma URL HTTPS publica da imagem/video (exigencia da Meta).');
+      return;
+    }
+    setPublicandoId(evt.id);
+    try {
+      if (!OBTER_SESSAO_INSTAGRAM()) {
+        const sessao = await CONECTAR_INSTAGRAM_OAUTH();
+        setSessaoIg(sessao);
+      }
+      const hashtagTxt = (evt.hashtags || []).map(h => (h.startsWith('#') ? h : '#' + h)).join(' ');
+      const caption = [evt.copy, hashtagTxt].filter(Boolean).join('\n\n');
+      await PUBLICAR_NO_INSTAGRAM({ caption, mediaUrl, mediaType: TIPO_MIDIA_DO_CANAL(evt.canal) });
+      ATUALIZAR_EVENTO_CALENDARIO({ ...evt, status: 'publicado' });
+      recarregarEventos();
+      setMsgIg('Publicado no Instagram com sucesso.');
+    } catch (e) {
+      setMsgIg(e instanceof Error ? e.message : 'Falha ao publicar no Instagram.');
+    } finally {
+      setPublicandoId(null);
+    }
+  };
+
+
 
   return (
     <div className="gb-panel p-6 text-white space-y-6">
@@ -177,6 +251,19 @@ export const CalendarioConteudo: React.FC<PropriedadesCalendario> = ({ diagnosti
           <Plus className="w-4 h-4" />
           <span>Novo Card</span>
         </button>
+          <div className="flex items-center gap-2 flex-wrap">
+            {sessaoIg ? (
+              <>
+                <span className="text-[11px] text-emerald-300 font-mono">@{sessaoIg.igUsername || sessaoIg.pageName || "IG"}</span>
+                <button type="button" onClick={desconectarInstagram} className="text-[11px] text-slate-400 underline">Desconectar</button>
+              </>
+            ) : (
+              <button type="button" onClick={conectarInstagram} className="gb-btn-ghost flex items-center gap-1.5 !px-3 !py-1.5 text-[11px]">
+                <Instagram className="w-3.5 h-3.5" />
+                <span>Conectar Instagram</span>
+              </button>
+            )}
+          </div>
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
@@ -208,6 +295,9 @@ export const CalendarioConteudo: React.FC<PropriedadesCalendario> = ({ diagnosti
         })}
       </div>
       <p className="text-xs text-slate-400">Agendamento manual: abrir o canal não publica o conteúdo. Confirme a postagem na rede social antes de marcar como publicada.</p>
+      {msgIg && (
+        <p className="text-xs font-mono mb-3 px-3 py-2 rounded-lg border border-blue-500/30 bg-blue-500/10 text-blue-200">{msgIg}</p>
+      )}
       <p className="text-xs text-slate-400">Use “Lembrete” para importar no seu calendário um alerta 30 minutos antes da postagem, inclusive com o app fechado.</p>
       {eventosSemana.some(e => e.status !== 'publicado' && new Date(e.dataHorario).getTime() < agora + 3600000) && <p role="status" className="text-amber-300 text-sm">Há postagens pendentes ou previstas para a próxima hora. Confira as datas abaixo.</p>}
       {/* QUADRO KANBAN DE 3 COLUNAS */}
@@ -259,6 +349,17 @@ export const CalendarioConteudo: React.FC<PropriedadesCalendario> = ({ diagnosti
 
                       <button type="button" onClick={() => baixarLembrete(evt)} className="text-xs text-blue-300 underline mb-3 mr-4">Lembrete</button>
                       <a href={DESTINOS[evt.canal]} target="_blank" rel="noopener noreferrer" className="text-blue-300 text-xs underline block mb-3">Abrir {evt.canal} ↗</a>
+                      {CANAL_INSTAGRAM(evt.canal) && evt.status !== 'publicado' && (
+                        <button
+                          type="button"
+                          onClick={() => publicarNoInstagram(evt)}
+                          disabled={publicandoId === evt.id}
+                          className="mb-3 w-full flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white text-[11px] font-mono font-bold uppercase tracking-wider disabled:opacity-50"
+                        >
+                          <Instagram className="w-3.5 h-3.5" />
+                          <span>{publicandoId === evt.id ? 'Publicando...' : 'Publicar no Instagram'}</span>
+                        </button>
+                      )}
                       <div className="flex items-center justify-between pt-3 border-t border-white/10">
                         <div className="flex items-center gap-1.5">
                           <button
@@ -388,6 +489,14 @@ export const CalendarioConteudo: React.FC<PropriedadesCalendario> = ({ diagnosti
                   placeholder="#Setor #Oferta #LetsGrow"
                   className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500 font-mono"
                 />
+            <label className="block text-xs font-mono text-slate-400 mb-1 mt-3">URL publica da midia (HTTPS) — obrigatoria para publicar no Instagram</label>
+            <input
+              type="url"
+              value={imagemUrl}
+              onChange={(e) => setImagemUrl(e.target.value)}
+              placeholder="https://..."
+              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white"
+            />
               </div>
 
               <div className="pt-3 border-t border-white/10 flex justify-end space-x-2">
