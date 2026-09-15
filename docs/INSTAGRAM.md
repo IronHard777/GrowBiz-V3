@@ -8,7 +8,8 @@
 ## Variaveis no Vercel (Project Settings → Environment Variables)
 - `META_APP_ID` — App ID do Meta for Developers
 - `META_APP_SECRET` — App Secret
-- `META_REDIRECT_URI` — ex.: `https://growbiz-v3.vercel.app/api/instagram-callback`
+- `META_REDIRECT_URI` — ex.: `https://growbiz-v3.vercel.app/api/instagram-callback`
+- `META_CONFIG_ID` — (opcional) Configuration ID do Facebook Login for Business; se preenchido, o OAuth usa config_id em vez de scope
 
 Cadastre a mesma Redirect URI no painel do App Meta (Facebook Login → Valid OAuth Redirect URIs).
 
