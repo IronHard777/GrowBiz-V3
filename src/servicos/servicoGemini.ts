@@ -633,20 +633,21 @@ function handleDeArquivoVeo(arquivoVideo: any): HandleVideoVeo {
   return handle;
 }
 
-function candidatosVideoExtensao(origem: any, handle?: HandleVideoVeo): Array<{ uri?: string; mimeType: string; videoBytes?: string }> {
+function candidatosVideoExtensao(origem: any, handle?: HandleVideoVeo): Array<{ uri?: string; videoBytes?: string }> {
   const uri = origem?.uri || handle?.uri;
   const videoBytes = handle?.videoBytes || origem?.videoBytes;
-  const mimeType = origem?.mimeType || handle?.mimeType || 'video/mp4';
-  const lista: Array<{ uri?: string; mimeType: string; videoBytes?: string }> = [];
-  if (videoBytes) lista.push({ videoBytes, mimeType });
-  if (uri) lista.push({ uri, mimeType });
+  // Nao enviar mimeType: o SDK @google/genai mapeia mimeType -> encoding e o Veo responde 400 INVALID_ARGUMENT.
+  const lista: Array<{ uri?: string; videoBytes?: string }> = [];
+  if (uri) lista.push({ uri });
+  if (videoBytes) lista.push({ videoBytes });
   return lista;
 }
 
 async function executarGenerateVideos(
   prompt: string,
   notificarProgresso: ((etapa: string) => void) | undefined,
-  videoAnterior?: HandleVideoVeo
+  videoAnterior?: HandleVideoVeo,
+  forcarNovo = false
 ): Promise<ResultadoVideoVeo | FalhaVideoVeo> {
   const apiKey = obterChaveGemini();
   if (!apiKey) return { erro: 'Chave Gemini ausente.' };
@@ -656,7 +657,11 @@ async function executarGenerateVideos(
     return { erro: 'O SDK @google/genai desta versão não expõe generateVideos.' };
   }
 
-  const estender = Boolean(videoAnterior || videoSdkParaExtensao);
+  if (forcarNovo) {
+    videoSdkParaExtensao = null;
+    videoUriParaExtensao = null;
+  }
+  const estender = !forcarNovo && Boolean(videoAnterior || videoSdkParaExtensao);
   const modelos = estender ? MODELOS_VEO_EXTENSAO : MODELOS_VEO;
   let ultimoErro: unknown = null;
 
@@ -858,7 +863,12 @@ export async function GERAR_VIDEO_VEO(
   notificarProgresso?: (etapa: string) => void,
   estilo?: string
 ): Promise<ResultadoVideoVeo | FalhaVideoVeo> {
-  return executarGenerateVideos(montarPromptVideoVeo(roteiro, tituloCampanha, estilo), notificarProgresso);
+  return executarGenerateVideos(
+    montarPromptVideoVeo(roteiro, tituloCampanha, estilo),
+    notificarProgresso,
+    undefined,
+    true
+  );
 }
 
 export async function ESTENDER_VIDEO_VEO(
