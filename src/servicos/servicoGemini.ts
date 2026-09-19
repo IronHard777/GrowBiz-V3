@@ -564,6 +564,9 @@ const MODELOS_VEO_EXTENSAO = [
 
 const TRAVA_ELENCO_VEO = `CHARACTER CONTINUITY LOCK (mandatory): One lead adult character. Keep identical appearance in every shot and every extension: same face, same skin tone, same age, same hair COLOR, same hair LENGTH, same hair STYLE. If the hair starts as a short pixie, it MUST stay a short pixie — never switch to ponytail, bun, long hair, or a different cut. Same clothes unless the script explicitly shows a change. Do not swap actors or change look without narrative reason.`;
 
+const TRAVA_DIALOGO_VEO = `DIALOGUE LOCK (mandatory): Speak ONLY the exact words inside each Line "..." quote, in Brazilian Portuguese. Do NOT invent words, do NOT ad-lib, do NOT add fillers, brand names, English phrases, or opening gibberish before the first Line. If a Line is empty, remain silent for that beat. Pronounce only what is written — no paraphrasing.`;
+
+
 function descricaoGenero(roteiro: CenaRoteiroVideo[]): string {
   return roteiro[0]?.generoVoz === 'masculina'
     ? 'the same adult male Brazilian Portuguese speaking voice in every shot'
@@ -572,7 +575,7 @@ function descricaoGenero(roteiro: CenaRoteiroVideo[]): string {
 
 function linhaCena(cena: CenaRoteiroVideo, rotulo: string): string {
   const extra = cena.promptUsuario?.trim() ? ` Client note: ${cena.promptUsuario.trim()}` : '';
-  return `${rotulo}: CAMERA ${cena.enquadramentoCamera}. ACTION: ${cena.acaoVisual}. Line: "${cena.falaAudio.replace(/["']/g, '')}".${extra}`;
+  return `${rotulo}: CAMERA ${cena.enquadramentoCamera}. ACTION: ${cena.acaoVisual}. Spoken Line (verbatim only): "${cena.falaAudio.replace(/["']/g, '')}".${extra}`;
 }
 
 function montarPromptVideoVeo(roteiro: CenaRoteiroVideo[], tituloCampanha: string, estilo = 'cinematográfico natural'): string {
@@ -580,13 +583,15 @@ function montarPromptVideoVeo(roteiro: CenaRoteiroVideo[], tituloCampanha: strin
   const gancho = roteiro[0];
   const dor = roteiro[1] || roteiro[0];
 
-  return `Animated or live-action (according to the selected style: ${estilo}) vertical 9:16 commercial PART 1 for "${tituloCampanha}". Duration 8 seconds. 720p.
+  return `Animated or live-action vertical 9:16 commercial PART 1 for "${tituloCampanha}". Duration 8 seconds. 720p.
 
 This is ONLY the opening of a longer ad (Google Flow / scene-extension style). Do NOT deliver the WhatsApp/CTA yet. End on a living shot that can continue: same people, same location, camera still moving.
 
 MUST include: adult characters, full environment, interaction and continuous visible subject motion. Use live-action for photographic styles; anime, pixel art or stop-motion must retain their chosen medium. No slideshow, no still image with zoom, no frozen subject.
-MUST keep ${genero}. Spoken Brazilian Portuguese. Natural ambient sound.
+MUST keep ${genero}. Spoken Brazilian Portuguese. Natural ambient sound only (no music lyrics).
 ${TRAVA_ELENCO_VEO}
+${TRAVA_DIALOGO_VEO}
+Visual style cue (direction only — NOT spoken dialogue): ${estilo}.
 
 Beats:
 ${gancho ? linhaCena(gancho, '0-4s HOOK') : ''}
@@ -607,6 +612,7 @@ function montarPromptExtensaoVeo(
 
   return `SCENE EXTENSION of the existing Veo clip for "${tituloCampanha}". Continue from the LAST SECOND of the input video — same people, wardrobe, location, lighting and ${genero}. Seamless narrative, not a new commercial.
 ${TRAVA_ELENCO_VEO}
+${TRAVA_DIALOGO_VEO}
 The lead character must look exactly as in the previous clip (hair, face, clothes). No sudden restyle.
 
 Next action:
