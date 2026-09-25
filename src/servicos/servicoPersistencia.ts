@@ -103,7 +103,7 @@ export function SALVAR_RESULTADO_CONSULTORIA_PERSISTENCIA(resultado: ResultadoCo
       canal: (resultado.campanhaMock.canalIdeal.includes('Reels') ? 'Instagram Reels' : 'Instagram Feed') as any,
       status: 'rascunho',
       copy: resultado.campanhaMock.copyPersuasiva,
-      imagemUrl: resultado.campanhaMock.imagemUrlPlaceholder,
+      imagemUrl: undefined, // sem mock/estoque — usuario anexa midia real antes de publicar
       hashtags: resultado.campanhaMock.hashtagsEstrategicas,
       criadoEm: new Date().toISOString()
     });
@@ -138,7 +138,7 @@ export function OBTER_EVENTOS_CALENDARIO(): EventoCalendarioConteudo[] {
         canal: 'Instagram Reels',
         status: 'agendado',
         copy: '🔥 O aroma que transforma o seu dia com grão especial artesanal.',
-        imagemUrl: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?auto=format&fit=crop&w=1000&q=80',
+        imagemUrl: undefined,
         hashtags: ['#CafeEspecial', '#GiroRapido', '#LetsGrow'],
         criadoEm: new Date().toISOString()
       },
@@ -150,7 +150,7 @@ export function OBTER_EVENTOS_CALENDARIO(): EventoCalendarioConteudo[] {
         canal: 'TikTok',
         status: 'agendado',
         copy: '💡 3 segredos que você não sabia sobre a torra perfeita.',
-        imagemUrl: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=1000&q=80',
+        imagemUrl: undefined,
         hashtags: ['#DicasDeCafe', '#TikTokBrasil', '#GrowBiz'],
         criadoEm: new Date().toISOString()
       },

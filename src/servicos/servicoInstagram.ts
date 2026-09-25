@@ -236,6 +236,83 @@ export async function PUBLICAR_NO_INSTAGRAM(params: {
   return { mediaId: pub.mediaId as string };
 }
 
+
+/** Dominios de foto de estoque / mock — nao podem ir para o Instagram. */
+const DOMINIOS_MIDIA_MOCK = [
+  'images.unsplash.com',
+  'unsplash.com',
+  'picsum.photos',
+  'placehold.co',
+  'placekitten.com',
+  'via.placeholder.com',
+  'dummyimage.com',
+  'loremflickr.com',
+  'source.unsplash.com'
+];
+
+export type ResultadoValidacaoMidiaIg = { ok: true } | { ok: false; erro: string };
+
+/**
+ * Impede publicar mock/estoque ou card sem midia real gerada/anexada.
+ */
+export function VALIDAR_MIDIA_PARA_INSTAGRAM(
+  mediaUrl: string | undefined | null,
+  mediaType: 'IMAGE' | 'REELS'
+): ResultadoValidacaoMidiaIg {
+  const url = (mediaUrl || '').trim();
+  if (!url) {
+    return {
+      ok: false,
+      erro:
+        'Nao ha midia neste card. Gere a imagem/video nos Mocks de Conteudo (IA) ou edite o card do Kanban e cole uma URL HTTPS publica da midia real antes de publicar.'
+    };
+  }
+  if (!/^https:\/\//i.test(url)) {
+    return {
+      ok: false,
+      erro:
+        'A URL da midia precisa ser HTTPS publica. Edite o card do Kanban e cole o link https:// da imagem (Feed) ou do video .mp4/.mov (Reels).'
+    };
+  }
+  let host = '';
+  try {
+    host = new URL(url).hostname.toLowerCase();
+  } catch {
+    return { ok: false, erro: 'URL da midia invalida. Cole um link https:// completo no card do Kanban.' };
+  }
+  if (DOMINIOS_MIDIA_MOCK.some((d) => host === d || host.endsWith('.' + d))) {
+    return {
+      ok: false,
+      erro:
+        'Esta URL e de imagem mock/estoque (ex.: Unsplash) e nao pode ser publicada. Gere a arte nos Mocks de Conteudo com IA, hospede o arquivo, e cole a URL HTTPS real no campo "URL publica da midia" do card — ou troque a URL antes de publicar.'
+    };
+  }
+  if (/\/photo-\d{10,}/i.test(url) && host.includes('unsplash')) {
+    return {
+      ok: false,
+      erro:
+        'Detectamos foto de estoque Unsplash. Publique apenas midia gerada nos Mocks ou anexada por voce no card do Kanban.'
+    };
+  }
+  const pareceImagem = /\.(jpe?g|png|gif|webp|bmp)(\?|$)/i.test(url);
+  const pareceVideo = /\.(mp4|mov|m4v|webm)(\?|$)/i.test(url);
+  if (mediaType === 'REELS' && !pareceVideo) {
+    return {
+      ok: false,
+      erro:
+        'Instagram Reels exige URL HTTPS publica de video (.mp4/.mov). Gere o video nos Mocks, hospede o arquivo e cole o link no card — ou use Instagram Feed para imagem.'
+    };
+  }
+  if (mediaType === 'IMAGE' && pareceVideo && !pareceImagem) {
+    return {
+      ok: false,
+      erro:
+        'Este card e Instagram Feed (imagem), mas a URL parece video. Troque o canal para Instagram Reels ou cole uma URL de imagem.'
+    };
+  }
+  return { ok: true };
+}
+
 export function CANAL_INSTAGRAM(canal: string): boolean {
   return canal === 'Instagram Reels' || canal === 'Instagram Feed';
 }

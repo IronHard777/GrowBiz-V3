@@ -12,6 +12,7 @@ import {
   CONECTAR_INSTAGRAM_OAUTH,
   LIMPAR_SESSAO_INSTAGRAM,
   PUBLICAR_NO_INSTAGRAM,
+  VALIDAR_MIDIA_PARA_INSTAGRAM,
   VERIFICAR_META_CONFIGURADO,
   CANAL_INSTAGRAM,
   TIPO_MIDIA_DO_CANAL,
@@ -201,16 +202,11 @@ export const CalendarioConteudo: React.FC<PropriedadesCalendario> = ({ diagnosti
   const publicarNoInstagram = async (evt: EventoCalendarioConteudo) => {
     setMsgIg(null);
     if (!CANAL_INSTAGRAM(evt.canal)) return;
-    const mediaUrl = (evt.imagemUrl || '').trim();
-    if (!/^https:\/\//i.test(mediaUrl)) {
-      setMsgIg('Para publicar, edite o card e cole uma URL HTTPS publica da imagem/video (exigencia da Meta).');
-      return;
-    }
     const mediaType = TIPO_MIDIA_DO_CANAL(evt.canal);
-    const pareceImagem = /\.(jpe?g|png|gif|webp|bmp)(\?|$)/i.test(mediaUrl);
-    const pareceVideo = /\.(mp4|mov|m4v|webm)(\?|$)/i.test(mediaUrl);
-    if (mediaType === 'REELS' && (!pareceVideo || (pareceImagem && !pareceVideo))) {
-      setMsgIg('Este card e Instagram Reels: cole uma URL HTTPS publica de video (.mp4/.mov). Para imagem, troque o canal para Instagram Feed.');
+    const mediaUrl = (evt.imagemUrl || '').trim();
+    const validacao = VALIDAR_MIDIA_PARA_INSTAGRAM(mediaUrl, mediaType);
+    if (validacao.ok === false) {
+      setMsgIg(validacao.erro);
       return;
     }
     setPublicandoId(evt.id);
