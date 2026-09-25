@@ -206,7 +206,15 @@ export const CalendarioConteudo: React.FC<PropriedadesCalendario> = ({ diagnosti
       setMsgIg('Para publicar, edite o card e cole uma URL HTTPS publica da imagem/video (exigencia da Meta).');
       return;
     }
+    const mediaType = TIPO_MIDIA_DO_CANAL(evt.canal);
+    const pareceImagem = /\.(jpe?g|png|gif|webp|bmp)(\?|$)/i.test(mediaUrl);
+    const pareceVideo = /\.(mp4|mov|m4v|webm)(\?|$)/i.test(mediaUrl);
+    if (mediaType === 'REELS' && (!pareceVideo || (pareceImagem && !pareceVideo))) {
+      setMsgIg('Este card e Instagram Reels: cole uma URL HTTPS publica de video (.mp4/.mov). Para imagem, troque o canal para Instagram Feed.');
+      return;
+    }
     setPublicandoId(evt.id);
+    setMsgIg(mediaType === 'REELS' ? 'Publicando Reel… isso pode levar 1–2 min.' : 'Publicando no Instagram…');
     try {
       if (!OBTER_SESSAO_INSTAGRAM()) {
         const sessao = await CONECTAR_INSTAGRAM_OAUTH();
@@ -214,7 +222,12 @@ export const CalendarioConteudo: React.FC<PropriedadesCalendario> = ({ diagnosti
       }
       const hashtagTxt = (evt.hashtags || []).map(h => (h.startsWith('#') ? h : '#' + h)).join(' ');
       const caption = [evt.copy, hashtagTxt].filter(Boolean).join('\n\n');
-      await PUBLICAR_NO_INSTAGRAM({ caption, mediaUrl, mediaType: TIPO_MIDIA_DO_CANAL(evt.canal) });
+      await PUBLICAR_NO_INSTAGRAM({
+        caption,
+        mediaUrl,
+        mediaType,
+        onProgress: (msg) => setMsgIg(msg)
+      });
       ATUALIZAR_EVENTO_CALENDARIO({ ...evt, status: 'publicado' });
       recarregarEventos();
       setMsgIg('Publicado no Instagram com sucesso.');

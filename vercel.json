@@ -1,3 +1,14 @@
 {
-  "framework": "vite"
+  "framework": "vite",
+  "functions": {
+    "api/instagram-publish.js": {
+      "maxDuration": 60
+    },
+    "api/instagram-callback.js": {
+      "maxDuration": 30
+    },
+    "api/instagram-oauth.js": {
+      "maxDuration": 10
+    }
+  }
 }

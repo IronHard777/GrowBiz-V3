@@ -131,30 +131,95 @@ export function CONECTAR_INSTAGRAM_OAUTH(): Promise<SessaoInstagram> {
   });
 }
 
+async function chamarPublishApi(body: Record<string, unknown>): Promise<any> {
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), 45000);
+  try {
+    const res = await fetch('/api/instagram-publish', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: controller.signal
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || json.ok === false) {
+      throw new Error(json.erro || 'Falha ao publicar no Instagram.');
+    }
+    return json;
+  } catch (e) {
+    if (e instanceof DOMException && e.name === 'AbortError') {
+      throw new Error('Tempo esgotado na API do Instagram. Tente de novo.');
+    }
+    throw e;
+  } finally {
+    window.clearTimeout(timer);
+  }
+}
+
 export async function PUBLICAR_NO_INSTAGRAM(params: {
   caption: string;
   mediaUrl: string;
   mediaType: 'IMAGE' | 'REELS';
+  onProgress?: (msg: string) => void;
 }): Promise<{ mediaId: string }> {
   const sessao = OBTER_SESSAO_INSTAGRAM();
   if (!sessao) throw new Error('Conecte uma conta Instagram Business/Creator antes de publicar.');
 
-  const res = await fetch('/api/instagram-publish', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
+  const base = {
+    accessToken: sessao.accessToken,
+    igUserId: sessao.igUserId,
+    caption: params.caption,
+    mediaUrl: params.mediaUrl,
+    mediaType: params.mediaType
+  };
+
+  if (params.mediaType === 'IMAGE') {
+    params.onProgress?.('Publicando imagem no Feed…');
+    const json = await chamarPublishApi({ ...base, action: 'all' });
+    if (!json.mediaId) throw new Error(json.erro || 'Falha ao publicar no Instagram.');
+    return { mediaId: json.mediaId as string };
+  }
+
+  // REELS: create → poll no cliente → publish (evita timeout da Vercel)
+  params.onProgress?.('Enviando vídeo para o Instagram…');
+  const criado = await chamarPublishApi({ ...base, action: 'create' });
+  const containerId = criado.containerId as string;
+  if (!containerId) throw new Error('Instagram nao retornou containerId do Reel.');
+
+  let lastStatus = '';
+  let lastDetail = '';
+  for (let i = 0; i < 40; i++) {
+    params.onProgress?.('Processando Reel no Instagram… (' + (i + 1) + '/40)');
+    await new Promise((r) => setTimeout(r, 3000));
+    const st = await chamarPublishApi({
       accessToken: sessao.accessToken,
       igUserId: sessao.igUserId,
-      caption: params.caption,
-      mediaUrl: params.mediaUrl,
-      mediaType: params.mediaType
-    })
-  });
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok || !json.ok) {
-    throw new Error(json.erro || 'Falha ao publicar no Instagram.');
+      action: 'status',
+      containerId
+    });
+    lastStatus = st.status_code || '';
+    lastDetail = st.status || '';
+    if (lastStatus === 'FINISHED') break;
+    if (lastStatus === 'ERROR') {
+      throw new Error(
+        'Processamento do Reel falhou no Instagram. ' +
+          (lastDetail || 'Use uma URL HTTPS publica de video (.mp4/.mov), sem login.')
+      );
+    }
   }
-  return { mediaId: json.mediaId as string };
+  if (lastStatus !== 'FINISHED') {
+    throw new Error('Timeout aguardando o Instagram processar o Reel (status: ' + (lastStatus || 'vazio') + ').');
+  }
+
+  params.onProgress?.('Publicando Reel…');
+  const pub = await chamarPublishApi({
+    accessToken: sessao.accessToken,
+    igUserId: sessao.igUserId,
+    action: 'publish',
+    containerId
+  });
+  if (!pub.mediaId) throw new Error(pub.erro || 'Falha ao publicar o Reel.');
+  return { mediaId: pub.mediaId as string };
 }
 
 export function CANAL_INSTAGRAM(canal: string): boolean {
