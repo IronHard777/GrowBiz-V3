@@ -1,0 +1,11 @@
+﻿node_modules
+dist
+.scratch
+.site-publish
+.antigravity
+.cursor
+.openai
+Design System
+*.docx
+.env
+.env.*

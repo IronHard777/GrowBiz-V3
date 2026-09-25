@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { PerfilUsuario, ModeloOperacional, EscopoGeografico, DiagnosticoCompleto, RespostasFiltroSetePerguntas, CategoriaModeloNegocio } from '../tipos';
+import { OBTER_CAMPO_LOCALIDADE_ESCOPO, OPCOES_ESCOPO_GEOGRAFICO } from '../utilitarios/escopoGeograficoUi';
 import {
   OBTER_SETE_PERGUNTAS_ESTRATEGICAS,
   CALCULAR_CATEGORIA_MODELO_NEGOCIO,
@@ -199,35 +200,33 @@ export const ModuloDiagnostico: React.FC<PropriedadesDiagnostico> = ({ usuario, 
                 onChange={(e) => setEscopoGeografico(e.target.value as EscopoGeografico)}
                 className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500"
               >
-                <option value="Local">Local</option>
-                <option value="Metropolitana">Área metropolitana</option>
-                <option value="Regional">Regional (Estado)</option>
-                <option value="Nacional">Nacional (Brasil)</option>
-                <option value="Global">Global / Internacional</option>
+                {OPCOES_ESCOPO_GEOGRAFICO.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
               </select>
             </div>
-            {(escopoGeografico === 'Local' || escopoGeografico === 'Metropolitana') && (
+            {(() => {
+              const campo = OBTER_CAMPO_LOCALIDADE_ESCOPO(escopoGeografico);
+              if (!campo.mostrar) return null;
+              return (
               <div className="p-3 bg-slate-800/80 rounded-xl border-l-4 border-emerald-500 border-slate-700 sm:col-span-2 lg:col-span-4">
-                <label className="block text-[10px] font-mono text-emerald-400 font-bold uppercase mb-1">Cidade</label>
+                <label className="block text-[10px] font-mono text-emerald-400 font-bold uppercase mb-1">{campo.label}</label>
                 <input
                   type="text"
-                  required={escopoGeografico === 'Metropolitana'}
+                  required={campo.obrigatorio}
                   value={cidade}
                   onChange={(e) => setCidade(e.target.value)}
-                  placeholder="Ex: São Paulo, Campinas, BH..."
+                  placeholder={campo.placeholder}
                   className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500"
                 />
-                <p className="text-[10px] text-slate-500 mt-1 font-mono">
-                  {escopoGeografico === 'Metropolitana'
-                    ? 'Obrigatório para área metropolitana — melhora a assertividade da IA.'
-                    : 'Informe a cidade para refinar o sensoriamento local.'}
-                </p>
+                <p className="text-[10px] text-slate-500 mt-1 font-mono">{campo.ajuda}</p>
               </div>
-            )}
+              );
+            })()}
           </div>
         </div>
 
-        {!investigando && <button type="button" className="gb-btn w-full" disabled={!nomeNegocio.trim() || !setor.trim() || (escopoGeografico === 'Metropolitana' && !cidade.trim())} onClick={() => setInvestigando(true)}>Continuar para as 7 perguntas →</button>}
+        {!investigando && <button type="button" className="gb-btn w-full" disabled={!nomeNegocio.trim() || !setor.trim() || (OBTER_CAMPO_LOCALIDADE_ESCOPO(escopoGeografico).obrigatorio && !cidade.trim())} onClick={() => setInvestigando(true)}>Continuar para as 7 perguntas →</button>}
         {investigando && <>
         <div className="gb-panel p-6 shadow-xl space-y-6">
           <div className="flex items-center justify-between border-b border-slate-800 pb-4">

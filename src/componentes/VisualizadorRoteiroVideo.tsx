@@ -244,7 +244,7 @@ export const VisualizadorRoteiroVideo: React.FC<PropriedadesRoteiro> = ({
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || urlVideoIa) return;
+    if (!canvas || true) return; // preview mockado desligado — só o clipe Veo
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
@@ -480,10 +480,10 @@ export const VisualizadorRoteiroVideo: React.FC<PropriedadesRoteiro> = ({
           <div className="flex items-center space-x-2 flex-wrap gap-y-1">
             <Video className="w-5 h-5 text-blue-400" />
             <h3 className="text-base font-extrabold text-white tracking-tight">
-              {urlVideoIa ? 'Player de Vídeo (Veo)' : 'Simulador de Vídeo + Timeline'}
+              {urlVideoIa ? 'Player de Vídeo (Veo)' : 'Roteiro de Vídeo'}
             </h3>
             <span className="text-[10px] bg-blue-500/10 text-blue-400 px-2.5 py-0.5 rounded-full border border-blue-500/20 font-mono font-bold uppercase">
-              {urlVideoIa ? 'API Veo' : 'Prévia local'}
+              {urlVideoIa ? 'API Veo' : 'Sem clipe'}
             </span>
           </div>
           <p className="text-xs text-slate-400 mt-1 font-mono">
@@ -547,6 +547,8 @@ export const VisualizadorRoteiroVideo: React.FC<PropriedadesRoteiro> = ({
 
         <button
           onClick={iniciarOuPausar}
+          disabled={!urlVideoIa}
+          title={!urlVideoIa ? 'Gere o vídeo com IA para reproduzir' : undefined}
           className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-mono font-bold uppercase transition-all shadow-md ${
             tocando
               ? 'bg-amber-500 text-slate-950 border border-amber-400'
@@ -580,7 +582,7 @@ export const VisualizadorRoteiroVideo: React.FC<PropriedadesRoteiro> = ({
           <div className="flex items-center justify-between w-full mb-3 px-2">
             <span className="text-[10px] font-mono font-bold text-slate-400 uppercase flex items-center gap-1.5">
               <Film className="w-4 h-4 text-blue-400" />
-              {urlVideoIa ? 'Clipe Veo 9:16' : 'Prévia local (imagem + zoom — não é o MP4)'}
+              {urlVideoIa ? 'Clipe Veo 9:16' : 'Aguardando geração'}
             </span>
             <div className="flex items-center space-x-1.5 font-mono text-[10px]">
               <span className={`w-2 h-2 rounded-full ${tocando ? 'bg-red-500 animate-ping' : 'bg-slate-600'}`} />
@@ -610,14 +612,25 @@ export const VisualizadorRoteiroVideo: React.FC<PropriedadesRoteiro> = ({
                 }}
               />
             ) : (
-              <canvas
-                ref={canvasRef}
-                width={260}
-                height={450}
-                className="absolute inset-0 w-full h-full object-cover"
-              />
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 gap-3 bg-slate-950">
+                <Film className="w-8 h-8 text-slate-600" />
+                <span className="text-xs font-mono font-bold text-slate-400 uppercase tracking-wider">Sem vídeo gerado</span>
+                <span className="text-[11px] text-slate-500 leading-relaxed max-w-[200px]">
+                  O preview mockado foi removido. Clique em Gerar do zero para criar o clipe com a API Veo — só gasta quando você pedir.</span>
+                <button
+                  type="button"
+                  onClick={() => void gerarVideoComApi('novo')}
+                  disabled={gerandoVideo}
+                  className="mt-1 px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 disabled:opacity-60 text-white text-[10px] font-mono font-bold uppercase tracking-wider flex items-center gap-1.5"
+                >
+                  {gerandoVideo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                  <span>{gerandoVideo ? 'Gerando…' : 'Gerar do zero'}</span>
+                </button>
+              </div>
             )}
 
+            {urlVideoIa && (
+            <>
             <div className="relative z-10 p-3 flex items-center justify-between pointer-events-none">
               <span className="text-[9px] font-mono font-bold bg-blue-500 text-white px-2 py-0.5 rounded-full uppercase shadow">
                 Cena {cenaAtiva + 1} de {roteiro.length}
@@ -638,6 +651,8 @@ export const VisualizadorRoteiroVideo: React.FC<PropriedadesRoteiro> = ({
                 </p>
               </div>
             </div>
+            </>
+            )}
           </div>
         </div>
 
@@ -812,7 +827,7 @@ export const VisualizadorRoteiroVideo: React.FC<PropriedadesRoteiro> = ({
             <button type="button" onClick={() => saltar(-3)} className="p-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 hover:text-white" title="Voltar 3s">
               <SkipBack className="w-3.5 h-3.5" />
             </button>
-            <button type="button" onClick={iniciarOuPausar} className="p-2 rounded-lg bg-blue-500 text-white hover:bg-blue-400">
+            <button type="button" onClick={iniciarOuPausar} disabled={!urlVideoIa} className="p-2 rounded-lg bg-blue-500 text-white hover:bg-blue-400 disabled:opacity-40">
               {tocando ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5 fill-current" />}
             </button>
             <button type="button" onClick={() => saltar(3)} className="p-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 hover:text-white" title="Avançar 3s">

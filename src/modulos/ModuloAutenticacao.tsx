@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { PerfilUsuario, ModeloOperacional, EscopoGeografico } from '../tipos';
+import { OBTER_CAMPO_LOCALIDADE_ESCOPO, OPCOES_ESCOPO_GEOGRAFICO } from '../utilitarios/escopoGeograficoUi';
 import { CRIAR_USUARIO_DEMO, SALVAR_SESSAO_USUARIO } from '../servicos/servicoAutenticacao';
 import { Mail, Phone, Lock, Building, ArrowRight, ShieldCheck } from 'lucide-react';
 
@@ -204,26 +205,28 @@ export const ModuloAutenticacao: React.FC<PropriedadesAutenticacao> = ({ aoAuten
                 onChange={(e) => setEscopoGeografico(e.target.value as EscopoGeografico)}
                 className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500"
               >
-                <option value="Local">Local</option>
-                <option value="Metropolitana">Área metropolitana</option>
-                <option value="Regional">Regional</option>
-                <option value="Nacional">Nacional</option>
-                <option value="Global">Global</option>
+                {OPCOES_ESCOPO_GEOGRAFICO.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
               </select>
             </div>
-            {(escopoGeografico === 'Local' || escopoGeografico === 'Metropolitana') && (
+            {(() => {
+              const campo = OBTER_CAMPO_LOCALIDADE_ESCOPO(escopoGeografico);
+              if (!campo.mostrar) return null;
+              return (
               <div>
-                <label className="block text-[10px] font-mono uppercase text-slate-400 mb-1">Cidade</label>
+                <label className="block text-[10px] font-mono uppercase text-slate-400 mb-1">{campo.label}</label>
                 <input
                   type="text"
-                  required={escopoGeografico === 'Metropolitana'}
+                  required={campo.obrigatorio}
                   value={cidade}
                   onChange={(e) => setCidade(e.target.value)}
-                  placeholder="Ex: São Paulo..."
+                  placeholder={campo.placeholder}
                   className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500"
                 />
               </div>
-            )}
+              );
+            })()}
           </div>
 
           <button
