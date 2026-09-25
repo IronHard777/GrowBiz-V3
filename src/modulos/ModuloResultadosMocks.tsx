@@ -105,6 +105,8 @@ export const ModuloResultadosMocks: React.FC<PropriedadesResultados> = ({ result
   };
 
   const aoAdicionarPropostaAoKanban = (proposta: PropostaCampanha) => {
+    const midia = (imagemCampanha.imagemUrl || '').trim();
+    const midiaOk = Boolean(midia && !/unsplash|picsum|placehold/i.test(midia));
     CRIAR_EVENTO_CALENDARIO({
       id: `evt_${proposta.id}`,
       diagnosticoId: diagnostico.id,
@@ -114,6 +116,7 @@ export const ModuloResultadosMocks: React.FC<PropriedadesResultados> = ({ result
       status: 'rascunho',
       copy: proposta.copy || proposta.descricao,
       hashtags: proposta.hashtags?.length ? proposta.hashtags : campanhaAtual.hashtagsEstrategicas,
+      imagemUrl: midiaOk ? midia : undefined,
       criadoEm: new Date().toISOString()
     });
     setPropostasAdicionadasIds(prev => [...prev, proposta.id]);
@@ -291,7 +294,7 @@ return (
 
       {/* KANBAN DE ACOMPANHAMENTO */}
       {abaAtiva === 'kanban' && (
-        <CalendarioConteudo diagnosticoId={diagnostico.id} sinalDeAtualizacao={sinalDeAtualizacaoKanban} />
+        <CalendarioConteudo diagnosticoId={diagnostico.id} sinalDeAtualizacao={sinalDeAtualizacaoKanban} midiaMockUrl={imagemCampanha.imagemUrl} />
       )}
 
       {/* MÓDULO 2: ESTRATÉGIA DE CRESCIMENTO */}

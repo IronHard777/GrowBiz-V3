@@ -13,6 +13,7 @@ import {
   LIMPAR_SESSAO_INSTAGRAM,
   PUBLICAR_NO_INSTAGRAM,
   VALIDAR_MIDIA_PARA_INSTAGRAM,
+  RESOLVER_URL_PUBLICA_MIDIA,
   VERIFICAR_META_CONFIGURADO,
   CANAL_INSTAGRAM,
   TIPO_MIDIA_DO_CANAL,
@@ -36,8 +37,9 @@ import {
 
 interface PropriedadesCalendario {
   diagnosticoId: string;
-  /** Incrementar este valor força o Kanban a recarregar os eventos (ex: após "Adicionar ao Kanban" nas Propostas). */
   sinalDeAtualizacao?: number;
+  /** Imagem/video gerado na aba Mocks de Conteudo — usado na publicacao se o card nao tiver URL. */
+  midiaMockUrl?: string | null;
 }
 
 interface ColunaKanban {
@@ -64,7 +66,7 @@ const PROXIMO_STATUS: Record<StatusEventoCalendario, StatusEventoCalendario | nu
   publicado: null
 };
 
-export const CalendarioConteudo: React.FC<PropriedadesCalendario> = ({ diagnosticoId, sinalDeAtualizacao }) => {
+export const CalendarioConteudo: React.FC<PropriedadesCalendario> = ({ diagnosticoId, sinalDeAtualizacao, midiaMockUrl }) => {
   const [eventos, setEventos] = useState<EventoCalendarioConteudo[]>([]);
   const [sessaoIg, setSessaoIg] = useState<SessaoInstagram | null>(() => OBTER_SESSAO_INSTAGRAM());
   const [metaConfigurado, setMetaConfigurado] = useState<boolean>(false);
@@ -98,7 +100,25 @@ export const CalendarioConteudo: React.FC<PropriedadesCalendario> = ({ diagnosti
     setEventos(lista.filter(e => e.diagnosticoId === diagnosticoId).sort((a, b) => new Date(a.dataHorario).getTime() - new Date(b.dataHorario).getTime()));
   };
 
+  
+  // Sincroniza midia dos Mocks de Conteudo nos cards deste diagnostico (sem sobrescrever URL HTTPS manual).
   useEffect(() => {
+    const mock = (midiaMockUrl || '').trim();
+    if (!mock) return;
+    if (/unsplash|picsum|placehold/i.test(mock)) return;
+    const lista = OBTER_EVENTOS_CALENDARIO().filter((e) => e.diagnosticoId === diagnosticoId);
+    let mudou = false;
+    for (const evt of lista) {
+      const atual = (evt.imagemUrl || '').trim();
+      if (atual && !/unsplash|picsum|placehold/i.test(atual) && !atual.startsWith('data:')) continue;
+      if (atual === mock) continue;
+      ATUALIZAR_EVENTO_CALENDARIO({ ...evt, imagemUrl: mock });
+      mudou = true;
+    }
+    if (mudou) recarregarEventos();
+  }, [midiaMockUrl, diagnosticoId, sinalDeAtualizacao]);
+
+useEffect(() => {
     recarregarEventos();
   }, [sinalDeAtualizacao, diagnosticoId]);
 
@@ -204,7 +224,7 @@ export const CalendarioConteudo: React.FC<PropriedadesCalendario> = ({ diagnosti
     if (!CANAL_INSTAGRAM(evt.canal)) return;
     const mediaType = TIPO_MIDIA_DO_CANAL(evt.canal);
     const mediaUrl = (evt.imagemUrl || '').trim();
-    const validacao = VALIDAR_MIDIA_PARA_INSTAGRAM(mediaUrl, mediaType);
+    const validacao = VALIDAR_MIDIA_PARA_INSTAGRAM(mediaUrl, mediaType, midiaMockUrl);
     if (validacao.ok === false) {
       setMsgIg(validacao.erro);
       return;
@@ -218,9 +238,14 @@ export const CalendarioConteudo: React.FC<PropriedadesCalendario> = ({ diagnosti
       }
       const hashtagTxt = (evt.hashtags || []).map(h => (h.startsWith('#') ? h : '#' + h)).join(' ');
       const caption = [evt.copy, hashtagTxt].filter(Boolean).join('\n\n');
+      setMsgIg('Preparando midia dos Mocks para a Meta…');
+      const urlPublica = await RESOLVER_URL_PUBLICA_MIDIA(mediaUrl, midiaMockUrl);
+      if (urlPublica !== mediaUrl) {
+        ATUALIZAR_EVENTO_CALENDARIO({ ...evt, imagemUrl: urlPublica });
+      }
       await PUBLICAR_NO_INSTAGRAM({
         caption,
-        mediaUrl,
+        mediaUrl: urlPublica,
         mediaType,
         onProgress: (msg) => setMsgIg(msg)
       });

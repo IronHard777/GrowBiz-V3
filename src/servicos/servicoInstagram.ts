@@ -257,21 +257,45 @@ export type ResultadoValidacaoMidiaIg = { ok: true } | { ok: false; erro: string
  */
 export function VALIDAR_MIDIA_PARA_INSTAGRAM(
   mediaUrl: string | undefined | null,
-  mediaType: 'IMAGE' | 'REELS'
+  mediaType: 'IMAGE' | 'REELS',
+  midiaMockUrl?: string | null
 ): ResultadoValidacaoMidiaIg {
-  const url = (mediaUrl || '').trim();
+  const url = (mediaUrl || '').trim() || (midiaMockUrl || '').trim();
   if (!url) {
     return {
       ok: false,
       erro:
-        'Nao ha midia neste card. Gere a imagem/video nos Mocks de Conteudo (IA) ou edite o card do Kanban e cole uma URL HTTPS publica da midia real antes de publicar.'
+        'Nao ha midia neste card nem nos Mocks de Conteudo. Gere a imagem/video na aba Mocks de Conteudo (IA) ou edite o card e cole uma URL HTTPS publica antes de publicar.'
     };
   }
+
+  // Midia gerada nos Mocks (base64) conta como valida — na publicacao sera hospedada em HTTPS.
+  if (/^data:image\//i.test(url)) {
+    if (mediaType === 'REELS') {
+      return {
+        ok: false,
+        erro:
+          'Nos Mocks ha uma imagem, mas este card e Instagram Reels (video). Gere/anexe um .mp4/.mov ou troque o canal para Instagram Feed.'
+      };
+    }
+    return { ok: true };
+  }
+  if (/^data:video\//i.test(url)) {
+    if (mediaType === 'IMAGE') {
+      return {
+        ok: false,
+        erro:
+          'Nos Mocks ha um video, mas este card e Instagram Feed (imagem). Troque o canal para Instagram Reels ou use uma imagem.'
+      };
+    }
+    return { ok: true };
+  }
+
   if (!/^https:\/\//i.test(url)) {
     return {
       ok: false,
       erro:
-        'A URL da midia precisa ser HTTPS publica. Edite o card do Kanban e cole o link https:// da imagem (Feed) ou do video .mp4/.mov (Reels).'
+        'A URL da midia precisa ser HTTPS publica, ou a imagem gerada nos Mocks. Edite o card ou regenere nos Mocks de Conteudo.'
     };
   }
   let host = '';
@@ -284,14 +308,7 @@ export function VALIDAR_MIDIA_PARA_INSTAGRAM(
     return {
       ok: false,
       erro:
-        'Esta URL e de imagem mock/estoque (ex.: Unsplash) e nao pode ser publicada. Gere a arte nos Mocks de Conteudo com IA, hospede o arquivo, e cole a URL HTTPS real no campo "URL publica da midia" do card — ou troque a URL antes de publicar.'
-    };
-  }
-  if (/\/photo-\d{10,}/i.test(url) && host.includes('unsplash')) {
-    return {
-      ok: false,
-      erro:
-        'Detectamos foto de estoque Unsplash. Publique apenas midia gerada nos Mocks ou anexada por voce no card do Kanban.'
+        'Esta URL e de imagem mock/estoque (ex.: Unsplash). Use a imagem gerada nos Mocks de Conteudo ou cole uma URL HTTPS da sua arte real.'
     };
   }
   const pareceImagem = /\.(jpe?g|png|gif|webp|bmp)(\?|$)/i.test(url);
@@ -300,17 +317,42 @@ export function VALIDAR_MIDIA_PARA_INSTAGRAM(
     return {
       ok: false,
       erro:
-        'Instagram Reels exige URL HTTPS publica de video (.mp4/.mov). Gere o video nos Mocks, hospede o arquivo e cole o link no card — ou use Instagram Feed para imagem.'
+        'Instagram Reels exige URL HTTPS de video (.mp4/.mov) ou video gerado nos Mocks. Para imagem, use Instagram Feed.'
     };
   }
   if (mediaType === 'IMAGE' && pareceVideo && !pareceImagem) {
     return {
       ok: false,
       erro:
-        'Este card e Instagram Feed (imagem), mas a URL parece video. Troque o canal para Instagram Reels ou cole uma URL de imagem.'
+        'Este card e Instagram Feed (imagem), mas a URL parece video. Troque para Instagram Reels ou cole URL de imagem.'
     };
   }
   return { ok: true };
+}
+
+export async function HOSPEDAR_MIDIA_DATA_URL(dataUrl: string): Promise<string> {
+  const res = await fetch('/api/hospedar-midia', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ dataUrl })
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok || !json.url) {
+    throw new Error(json.erro || 'Falha ao hospedar midia dos Mocks para a Meta.');
+  }
+  return json.url as string;
+}
+
+export async function RESOLVER_URL_PUBLICA_MIDIA(
+  mediaUrl: string,
+  midiaMockUrl?: string | null
+): Promise<string> {
+  let url = (mediaUrl || '').trim() || (midiaMockUrl || '').trim();
+  if (!url) throw new Error('Sem midia para publicar.');
+  if (/^data:/i.test(url)) {
+    return HOSPEDAR_MIDIA_DATA_URL(url);
+  }
+  return url;
 }
 
 export function CANAL_INSTAGRAM(canal: string): boolean {
