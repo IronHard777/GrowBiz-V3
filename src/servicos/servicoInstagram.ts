@@ -156,6 +156,40 @@ async function chamarPublishApi(body: Record<string, unknown>): Promise<any> {
   }
 }
 
+async function aguardarContainerPronto(
+  sessao: { accessToken: string; igUserId: string },
+  containerId: string,
+  onProgress?: (msg: string) => void,
+  tentativas = 40
+): Promise<void> {
+  let lastStatus = '';
+  let lastDetail = '';
+  for (let i = 0; i < tentativas; i++) {
+    onProgress?.('Processando midia no Instagram… (' + (i + 1) + '/' + tentativas + ')');
+    if (i > 0) await new Promise((r) => setTimeout(r, 2500));
+    const st = await chamarPublishApi({
+      accessToken: sessao.accessToken,
+      igUserId: sessao.igUserId,
+      action: 'status',
+      containerId
+    });
+    lastStatus = st.status_code || '';
+    lastDetail = st.status || '';
+    if (lastStatus === 'FINISHED') return;
+    if (lastStatus === 'ERROR') {
+      throw new Error(
+        'Processamento da midia falhou no Instagram. ' +
+          (lastDetail || 'Confira se a URL HTTPS e publica e do tipo certo (imagem no Feed, .mp4/.mov no Reels).')
+      );
+    }
+    // IN_PROGRESS / PUBLISHED / vazio: continua
+  }
+  throw new Error(
+    'Timeout aguardando a Meta processar a midia (status: ' + (lastStatus || 'vazio') + '). ' +
+      'Se a URL for valida, tente de novo em alguns segundos.'
+  );
+}
+
 export async function PUBLICAR_NO_INSTAGRAM(params: {
   caption: string;
   mediaUrl: string;
@@ -173,52 +207,32 @@ export async function PUBLICAR_NO_INSTAGRAM(params: {
     mediaType: params.mediaType
   };
 
-  if (params.mediaType === 'IMAGE') {
-    params.onProgress?.('Publicando imagem no Feed…');
-    const json = await chamarPublishApi({ ...base, action: 'all' });
-    if (!json.mediaId) throw new Error(json.erro || 'Falha ao publicar no Instagram.');
-    return { mediaId: json.mediaId as string };
-  }
+  params.onProgress?.(
+    params.mediaType === 'REELS' ? 'Enviando video para o Instagram…' : 'Enviando imagem para o Instagram…'
+  );
 
-  // REELS: create → poll no cliente → publish (evita timeout da Vercel)
-  params.onProgress?.('Enviando vídeo para o Instagram…');
+  // Sempre create + poll + publish — evita "Media ID is not available"
   const criado = await chamarPublishApi({ ...base, action: 'create' });
   const containerId = criado.containerId as string;
-  if (!containerId) throw new Error('Instagram nao retornou containerId do Reel.');
+  if (!containerId) throw new Error('Instagram nao retornou containerId da midia.');
 
-  let lastStatus = '';
-  let lastDetail = '';
-  for (let i = 0; i < 40; i++) {
-    params.onProgress?.('Processando Reel no Instagram… (' + (i + 1) + '/40)');
-    await new Promise((r) => setTimeout(r, 3000));
-    const st = await chamarPublishApi({
-      accessToken: sessao.accessToken,
-      igUserId: sessao.igUserId,
-      action: 'status',
-      containerId
-    });
-    lastStatus = st.status_code || '';
-    lastDetail = st.status || '';
-    if (lastStatus === 'FINISHED') break;
-    if (lastStatus === 'ERROR') {
-      throw new Error(
-        'Processamento do Reel falhou no Instagram. ' +
-          (lastDetail || 'Use uma URL HTTPS publica de video (.mp4/.mov), sem login.')
-      );
-    }
-  }
-  if (lastStatus !== 'FINISHED') {
-    throw new Error('Timeout aguardando o Instagram processar o Reel (status: ' + (lastStatus || 'vazio') + ').');
-  }
+  params.onProgress?.('Aguardando Meta processar a midia…');
+  await new Promise((r) => setTimeout(r, 2000));
+  await aguardarContainerPronto(sessao, containerId, params.onProgress);
 
-  params.onProgress?.('Publicando Reel…');
+  params.onProgress?.('Publicando no Instagram…');
   const pub = await chamarPublishApi({
     accessToken: sessao.accessToken,
     igUserId: sessao.igUserId,
     action: 'publish',
     containerId
   });
-  if (!pub.mediaId) throw new Error(pub.erro || 'Falha ao publicar o Reel.');
+  if (!pub.mediaId) {
+    throw new Error(
+      pub.erro ||
+        'Media ID is not available — o container ainda nao estava pronto ou o token/conta Meta precisa ser reconectado.'
+    );
+  }
   return { mediaId: pub.mediaId as string };
 }
 

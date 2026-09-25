@@ -63,7 +63,8 @@ export default async function handler(req, res) {
       const pubJson = await pubRes.json();
       if (!pubRes.ok || !pubJson.id) {
         res.status(pubRes.status || 502).json({
-          erro: (pubJson.error && pubJson.error.message) || "Falha ao publicar no Instagram."
+          erro: (pubJson.error && pubJson.error.message) || "Falha ao publicar no Instagram.",
+          dica: "Media ID is not available costuma ser container ainda processando ou token/conta invalida. Aguarde FINISHED e reconecte o Instagram se persistir."
         });
         return;
       }
