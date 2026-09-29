@@ -414,7 +414,7 @@ export const VisualizadorRoteiroVideo: React.FC<PropriedadesRoteiro> = ({
 
   const gerarVideoComApi = async (modo: 'novo' | 'continuar' = 'novo') => {
     if (!temChaveGemini) {
-      setErroVideo('Configure VITE_GEMINI_API_KEY para gerar o vídeo com a API Veo.');
+      setErroVideo('Configure GEMINI_API_KEY no servidor (Vercel / .env.local) para gerar o vídeo com a API Veo.');
       return;
     }
     setGerandoVideo(true);

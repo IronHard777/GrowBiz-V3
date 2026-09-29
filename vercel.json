@@ -1,6 +1,21 @@
 {
   "framework": "vite",
   "functions": {
+    "api/ia.js": {
+      "maxDuration": 60
+    },
+    "api/veo-generate.js": {
+      "maxDuration": 60
+    },
+    "api/veo-extend.js": {
+      "maxDuration": 60
+    },
+    "api/veo-operation.js": {
+      "maxDuration": 30
+    },
+    "api/veo-download.js": {
+      "maxDuration": 60
+    },
     "api/instagram-publish.js": {
       "maxDuration": 60
     },
@@ -9,6 +24,9 @@
     },
     "api/instagram-oauth.js": {
       "maxDuration": 10
+    },
+    "api/hospedar-midia.js": {
+      "maxDuration": 30
     }
   }
 }

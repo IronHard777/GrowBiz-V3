@@ -10,7 +10,7 @@ export default async function handler(req, res) {
     return;
   }
 
-  const chave = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY || '';
+  const chave = process.env.GEMINI_API_KEY || '';
   const alvo = `https://generativelanguage.googleapis.com/v1beta/${nome}?key=${encodeURIComponent(chave)}`;
 
   try {

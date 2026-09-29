@@ -1,3 +1,5 @@
+import { obterChaveGemini } from './_lib/chaveGemini.js';
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.status(405).send('Method Not Allowed');
@@ -6,19 +8,19 @@ export default async function handler(req, res) {
 
   const corpo = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
   const prompt = String(corpo.prompt || '');
-  const videoUri = String(corpo.videoUri || '');
   const modelo = String(corpo.modelo || 'veo-3.1-generate-preview');
 
-  if (!prompt || !videoUri) {
-    res.status(400).send('prompt e videoUri obrigatorios');
-    return;
-  }
-  if (!videoUri.includes('googleapis.com')) {
-    res.status(400).send('uri nao permitida');
+  if (!prompt) {
+    res.status(400).send('prompt obrigatorio');
     return;
   }
 
-  const chave = process.env.GEMINI_API_KEY || '';
+  const chave = obterChaveGemini();
+  if (!chave) {
+    res.status(503).json({ error: { message: 'GEMINI_API_KEY ausente no servidor' } });
+    return;
+  }
+
   const alvo = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modelo)}:predictLongRunning?key=${encodeURIComponent(chave)}`;
 
   try {
@@ -26,11 +28,12 @@ export default async function handler(req, res) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        instances: [{ prompt, video: { uri: videoUri } }],
+        instances: [{ prompt }],
         parameters: {
           sampleCount: 1,
           resolution: '720p',
-          aspectRatio: '9:16'
+          aspectRatio: '9:16',
+          durationSeconds: 8
         }
       })
     });
@@ -39,7 +42,7 @@ export default async function handler(req, res) {
     res.setHeader('Content-Type', 'application/json');
     res.send(texto);
   } catch (erro) {
-    console.warn('Proxy Veo extend falhou:', erro);
-    res.status(502).json({ error: { message: 'falha ao estender video' } });
+    console.warn('Proxy Veo generate falhou:', erro);
+    res.status(502).json({ error: { message: 'falha ao iniciar geracao de video' } });
   }
 }

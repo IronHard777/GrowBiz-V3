@@ -6,7 +6,7 @@ import { GoogleGenAI } from '@google/genai';
 
 dotenv.config();
 
-const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
+const apiKey = process.env.GEMINI_API_KEY;
 if (!apiKey || apiKey === 'MY_GEMINI_API_KEY') {
   console.error(JSON.stringify({ ok: false, erro: 'Chave Gemini ausente' }));
   process.exit(1);

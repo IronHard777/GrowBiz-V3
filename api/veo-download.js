@@ -22,7 +22,7 @@ export default async function handler(req, res) {
     return;
   }
 
-  const chave = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY || '';
+  const chave = process.env.GEMINI_API_KEY || '';
   const alvo = uri.includes('key=')
     ? uri
     : `${uri}${uri.includes('?') ? '&' : '?'}key=${encodeURIComponent(chave)}`;
