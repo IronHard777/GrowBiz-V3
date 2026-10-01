@@ -21,37 +21,43 @@ export type EstadoFluxoPublicacao = {
   publicacaoConcluida: boolean;
 };
 
-const PASSOS: {
+type PassoMeta = {
   id: PassoFluxoId;
   rotulo: string;
   ajuda: string;
   Icone: React.ComponentType<{ className?: string }>;
-}[] = [
-  {
-    id: 1,
-    rotulo: 'Gerar imagem/vídeo',
-    ajuda: 'Gere uma imagem ou vídeo nos Mocks para continuar o fluxo.',
-    Icone: ImageIcon
-  },
-  {
-    id: 2,
-    rotulo: 'Proposta',
-    ajuda: 'Revise título e copy da proposta; quando estiver pronta, envie ao Kanban.',
-    Icone: FileText
-  },
-  {
-    id: 3,
-    rotulo: 'Kanban',
-    ajuda: 'Organize os cards no Kanban e confira se a mídia HTTPS está no card.',
-    Icone: LayoutGrid
-  },
-  {
-    id: 4,
-    rotulo: 'Publicar no Instagram',
-    ajuda: 'Conecte o Instagram e publique pelo botão do card no Kanban.',
-    Icone: Instagram
-  }
-];
+};
+
+function MONTAR_PASSOS(incluiVideo: boolean): PassoMeta[] {
+  return [
+    {
+      id: 1,
+      rotulo: incluiVideo ? 'Gerar imagem/vídeo' : 'Gerar imagem',
+      ajuda: incluiVideo
+        ? 'Gere uma imagem ou vídeo nos Mocks para continuar o fluxo.'
+        : 'Gere uma imagem nos Mocks para continuar o fluxo.',
+      Icone: ImageIcon
+    },
+    {
+      id: 2,
+      rotulo: 'Proposta',
+      ajuda: 'Revise título e copy da proposta; quando estiver pronta, envie ao Kanban.',
+      Icone: FileText
+    },
+    {
+      id: 3,
+      rotulo: 'Kanban',
+      ajuda: 'Organize os cards no Kanban e confira se a mídia HTTPS está no card.',
+      Icone: LayoutGrid
+    },
+    {
+      id: 4,
+      rotulo: 'Publicar no Instagram',
+      ajuda: 'Conecte o Instagram e publique pelo botão do card no Kanban.',
+      Icone: Instagram
+    }
+  ];
+}
 
 /**
  * Deriva o passo atual a partir do estado real.
@@ -111,13 +117,17 @@ interface PropriedadesPassosFluxo {
   aoIrParaPasso: (passo: PassoFluxoId) => void;
   /** Enxuto: destaque visual no happy-path. Completo: layout padrão. */
   enfatizado?: boolean;
+  /** Quando false (tier so imagens), o passo 1 diz Gerar imagem. Default true. */
+  incluiVideo?: boolean;
 }
 
 export const PassosFluxoPublicacao: React.FC<PropriedadesPassosFluxo> = ({
   estado,
   aoIrParaPasso,
-  enfatizado = false
+  enfatizado = false,
+  incluiVideo = true
 }) => {
+  const PASSOS = MONTAR_PASSOS(incluiVideo);
   const passoAtual = DERIVAR_PASSO_ATUAL(estado);
   const ajudaAtual = PASSOS.find((p) => p.id === passoAtual)?.ajuda ?? '';
 

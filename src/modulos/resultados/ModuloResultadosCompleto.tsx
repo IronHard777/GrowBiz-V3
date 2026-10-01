@@ -172,7 +172,7 @@ export const ModuloResultadosCompleto: React.FC<Props> = ({
       )}
 
       {/* Stepper presente, sem ênfase visual do enxuto — ao lado da estratégia */}
-      <PassosFluxoPublicacao estado={estadoFluxo} aoIrParaPasso={aoIrParaPassoFluxo} />
+      <PassosFluxoPublicacao estado={estadoFluxo} aoIrParaPasso={aoIrParaPassoFluxo} incluiVideo={infoTier.incluiVideo} />
 
       <div className="flex flex-wrap items-center gap-2">
         {metasAbas.map((tab) => (

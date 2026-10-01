@@ -62,7 +62,7 @@ export const ConteudoAbasResultados: React.FC<Props> = ({ abaAtiva, logica }) =>
         {infoTier.incluiImagem && (
           <div className="space-y-6">
             {infoTier.mostraPresetsMidia && (
-              <MediaPresets value={mediaPreset} onChange={setMediaPreset} />
+              <MediaPresets value={mediaPreset} onChange={setMediaPreset} permitirVideo={infoTier.incluiVideo} />
             )}
             <CardCampanhaMock
               promptAplicado={imagemCampanha.promptAplicado}

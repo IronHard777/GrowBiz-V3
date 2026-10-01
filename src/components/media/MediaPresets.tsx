@@ -26,6 +26,8 @@ export type PresetSelection = {
 type MediaPresetsProps = {
   value: PresetSelection;
   onChange: (value: PresetSelection) => void;
+  /** Quando false (ex.: enxuto_imagens), oculta a opcao Video. Default true. */
+  permitirVideo?: boolean;
 };
 
 type Option<T extends string> = {
@@ -187,18 +189,24 @@ function Section({
   );
 }
 
-export function MediaPresets({ value, onChange }: MediaPresetsProps) {
+export function MediaPresets({ value, onChange, permitirVideo = true }: MediaPresetsProps) {
+  const tiposVisiveis = permitirVideo
+    ? TYPE_OPTIONS
+    : TYPE_OPTIONS.filter((option) => option.id === 'image');
+
   return (
     <div className="w-full max-w-xl space-y-5 rounded-2xl border border-white/10 bg-zinc-950/60 p-4 text-zinc-100 shadow-lg shadow-black/20 backdrop-blur-sm sm:p-5">
       <header className="space-y-1">
         <h2 className="text-base font-semibold tracking-tight">Presets de midia</h2>
         <p className="text-sm text-zinc-400">
-          Escolha tipo, proporcao e estilo antes de gerar.
+          {permitirVideo
+            ? 'Escolha tipo, proporcao e estilo antes de gerar.'
+            : 'Escolha proporcao e estilo antes de gerar a imagem.'}
         </p>
       </header>
 
       <Section title="Tipo">
-        {TYPE_OPTIONS.map((option) => (
+        {tiposVisiveis.map((option) => (
           <div key={option.id}>
             <OptionCard
               option={option}

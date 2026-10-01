@@ -113,6 +113,7 @@ export const ModuloResultadosEnxuto: React.FC<Props> = ({
           estado={estadoFluxo}
           aoIrParaPasso={aoIrParaPassoFluxo}
           enfatizado
+          incluiVideo={infoTier.incluiVideo}
         />
       </div>
 
