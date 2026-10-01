@@ -9,10 +9,13 @@ import { ModuloAutenticacao } from './modulos/ModuloAutenticacao';
 import { ModuloDiagnostico } from './modulos/ModuloDiagnostico';
 import { ModuloCarregamentoIA } from './modulos/ModuloCarregamentoIA';
 import { ModuloResultadosMocks } from './modulos/ModuloResultadosMocks';
+import { ModuloEscolhaTier } from './modulos/ModuloEscolhaTier';
+import { IdTierPlano } from './tipos/tierPlano';
 
 export default function App() {
   const [usuario, setUsuario] = useState<PerfilUsuario | null>(null);
-  const [moduloAtivo, setModuloAtivo] = useState<'autenticacao' | 'diagnostico' | 'carregamento' | 'resultados'>('autenticacao');
+  const [moduloAtivo, setModuloAtivo] = useState<'autenticacao' | 'diagnostico' | 'carregamento' | 'escolha-tier' | 'resultados'>('autenticacao');
+  const [tierSelecionado, setTierSelecionado] = useState<IdTierPlano | null>(null);
   
   // Estado de processamento da IA
   const [textoCarregamento, setTextoCarregamento] = useState<string>('');
@@ -39,6 +42,7 @@ export default function App() {
     ENCERRAR_SESSAO();
     setUsuario(null);
     setResultadoConsultoria(null);
+    setTierSelecionado(null);
     setModuloAtivo('autenticacao');
   };
 
@@ -57,7 +61,7 @@ export default function App() {
       );
 
       setResultadoConsultoria(resultadoFinal);
-      setModuloAtivo('resultados');
+      setModuloAtivo('escolha-tier');
     } catch (e) {
       console.error("Erro no processamento da IA:", e);
       // Fallback seguro
@@ -72,12 +76,30 @@ export default function App() {
         kpisSimulados: kpis,
         alertaPivotagem: alerta
       });
-      setModuloAtivo('resultados');
+      setModuloAtivo('escolha-tier');
     }
   };
 
   const aoReiniciarDiagnostico = () => {
+    setTierSelecionado(null);
     setModuloAtivo('diagnostico');
+  };
+
+  const aoEscolherTier = (id: IdTierPlano) => {
+    setTierSelecionado(id);
+    setModuloAtivo('resultados');
+  };
+
+  const aoTrocarTier = () => {
+    setModuloAtivo('escolha-tier');
+  };
+
+  const aoNavegarModulo = (mod: 'autenticacao' | 'diagnostico' | 'carregamento' | 'escolha-tier' | 'resultados') => {
+    if (mod === 'resultados' && resultadoConsultoria && !tierSelecionado) {
+      setModuloAtivo('escolha-tier');
+      return;
+    }
+    setModuloAtivo(mod);
   };
 
   return (
@@ -87,7 +109,7 @@ export default function App() {
       <CabecalhoSaaS
         usuario={usuario}
         moduloAtivo={moduloAtivo}
-        aoNavegarPara={(mod) => setModuloAtivo(mod)}
+        aoNavegarPara={aoNavegarModulo}
         aoSair={aoSairDaConta}
         aoReiniciarDiagnostico={aoReiniciarDiagnostico}
       />
@@ -106,10 +128,19 @@ export default function App() {
           <ModuloCarregamentoIA etapaTexto={textoCarregamento} percentual={percentualCarregamento} />
         )}
 
-        {moduloAtivo === 'resultados' && resultadoConsultoria && (
+        {moduloAtivo === 'escolha-tier' && resultadoConsultoria && (
+          <ModuloEscolhaTier
+            aoEscolher={aoEscolherTier}
+            tierAtual={tierSelecionado}
+          />
+        )}
+
+        {moduloAtivo === 'resultados' && resultadoConsultoria && tierSelecionado && (
           <ModuloResultadosMocks
             resultado={resultadoConsultoria}
+            tier={tierSelecionado}
             aoRefazerDiagnostico={aoReiniciarDiagnostico}
+            aoTrocarTier={aoTrocarTier}
           />
         )}
       </main>

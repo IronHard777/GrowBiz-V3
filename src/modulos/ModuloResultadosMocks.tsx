@@ -14,15 +14,33 @@ import { GERAR_ROTEIRO_VIDEO_COM_ESTILO_GEMINI, GERAR_IMAGEM_IMAGEN3 } from '../
 import { CRIAR_EVENTO_CALENDARIO, ATUALIZAR_EVENTO_CALENDARIO, OBTER_EVENTOS_CALENDARIO } from '../servicos/servicoPersistencia';
 import { Sparkles, Compass, Clapperboard, BarChart3, RefreshCw, CheckCircle2, LayoutGrid } from 'lucide-react';
 import { MediaPresets, appendPresetToPrompt, type PresetSelection } from '../components/media/MediaPresets';
+import { IdTierPlano, OBTER_TIER } from '../tipos/tierPlano';
+import {
+  PassosFluxoPublicacao,
+  type PassoFluxoId,
+  type EstadoFluxoPublicacao
+} from '../components/fluxo/PassosFluxoPublicacao';
+import { OBTER_SESSAO_INSTAGRAM, CANAL_INSTAGRAM } from '../servicos/servicoInstagram';
 
 type AbaResultados = 'modulo3' | 'propostas' | 'kanban' | 'modulo2' | 'modulo4';
 
-interface PropriedadesResultados {
-  resultado: ResultadoCompletoConsultoria;
-  aoRefazerDiagnostico: () => void;
+/** HTTPS real (nao estoque) — alinhado ao criterio do Kanban/Instagram. */
+function URL_HTTPS_MIDIA_UTIL(url?: string | null): boolean {
+  const u = (url || '').trim();
+  if (!u || !/^https:\/\//i.test(u)) return false;
+  if (/unsplash|picsum|placehold/i.test(u)) return false;
+  return true;
 }
 
-export const ModuloResultadosMocks: React.FC<PropriedadesResultados> = ({ resultado, aoRefazerDiagnostico }) => {
+
+interface PropriedadesResultados {
+  resultado: ResultadoCompletoConsultoria;
+  tier: IdTierPlano;
+  aoRefazerDiagnostico: () => void;
+  aoTrocarTier: () => void;
+}
+
+export const ModuloResultadosMocks: React.FC<PropriedadesResultados> = ({ resultado, tier, aoRefazerDiagnostico, aoTrocarTier }) => {
   const [abaAtiva, setAbaAtiva] = useState<AbaResultados>('modulo3');
   const [notificacaoPivotagem, setNotificacaoPivotagem] = useState<boolean>(false);
   const [campanhaAtual, setCampanhaAtual] = useState<MockCampanhaConteudo>(resultado.campanhaMock);
@@ -42,6 +60,14 @@ export const ModuloResultadosMocks: React.FC<PropriedadesResultados> = ({ result
   const [sinalDeAtualizacaoKanban, setSinalDeAtualizacaoKanban] = useState<number>(0);
 
   const { diagnostico, estrategias, kpisSimulados, alertaPivotagem } = resultado;
+  const infoTier = OBTER_TIER(tier);
+
+  // Enxuto só-imagens: força preset de imagem (UI de vídeo fica oculta).
+  useEffect(() => {
+    if (!infoTier.incluiVideo && mediaPreset.type === 'video') {
+      setMediaPreset((prev) => ({ ...prev, type: 'image' }));
+    }
+  }, [infoTier.incluiVideo, mediaPreset.type]);
 
   // Única fonte da imagem visual da campanha — compartilhada entre o mockup estático e o
   // player de vídeo, para que ambos mostrem exatamente a mesma imagem gerada/personalizada.
@@ -160,6 +186,49 @@ export const ModuloResultadosMocks: React.FC<PropriedadesResultados> = ({ result
     setSinalDeAtualizacaoKanban(sinal => sinal + 1);
   };
 
+  // --- Fluxo visual happy-path (Gerar → Proposta → Kanban → Publicar) ---
+  // sinalDeAtualizacaoKanban forca releitura dos cards apos add/publish
+  void sinalDeAtualizacaoKanban;
+  const eventosKanban = OBTER_EVENTOS_CALENDARIO().filter((e) => e.diagnosticoId === diagnostico.id);
+  const temMidiaUtil =
+    URL_HTTPS_MIDIA_UTIL(imagemCampanha.imagemUrl) ||
+    URL_HTTPS_MIDIA_UTIL(imagemVideoEstilizada);
+  const propostaPronta =
+    temMidiaUtil &&
+    Boolean((campanhaAtual.copyPersuasiva || '').trim()) &&
+    Boolean((campanhaAtual.tituloCampanha || '').trim());
+  const sessaoIg = OBTER_SESSAO_INSTAGRAM();
+  const temCardProntoPublicar = eventosKanban.some(
+    (e) =>
+      CANAL_INSTAGRAM(e.canal) &&
+      e.status !== 'publicado' &&
+      (URL_HTTPS_MIDIA_UTIL(e.imagemUrl) || temMidiaUtil)
+  );
+  const publicacaoConcluida = eventosKanban.some((e) => e.status === 'publicado');
+
+  const estadoFluxo: EstadoFluxoPublicacao = {
+    temMidiaUtil,
+    propostaPronta,
+    estaNoKanban: abaAtiva === 'kanban',
+    temCardsKanban: eventosKanban.length > 0,
+    instagramConectado: Boolean(sessaoIg),
+    temCardProntoPublicar,
+    publicacaoConcluida
+  };
+
+  const aoIrParaPassoFluxo = (passo: PassoFluxoId) => {
+    if (passo === 1) {
+      setAbaAtiva('modulo3');
+      return;
+    }
+    if (passo === 2) {
+      setAbaAtiva('propostas');
+      return;
+    }
+    // 3 e 4 usam o Kanban existente (publicar fica nos cards)
+    setAbaAtiva('kanban');
+  };
+
   const TABS: { id: AbaResultados; label: string; icone: React.ReactNode }[] = [
     { id: 'modulo3', label: 'Mocks de Conteúdo', icone: <Clapperboard className="w-3.5 h-3.5" /> },
     { id: 'propostas', label: 'Propostas de Campanha', icone: <Sparkles className="w-3.5 h-3.5" /> },
@@ -219,7 +288,20 @@ return (
             </p>
           </div>
 
-          <div className="flex items-center space-x-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:space-x-3">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border border-white/15 bg-white/5 text-slate-300">
+                {infoTier.nome}
+              </span>
+              <button
+                type="button"
+                onClick={aoTrocarTier}
+                className="text-[11px] text-slate-400 hover:text-blue-300 underline underline-offset-2 transition-colors"
+                title="Trocar formato do plano"
+              >
+                Trocar plano
+              </button>
+            </div>
             <button
               onClick={aoRefazerDiagnostico}
               className="gb-btn-ghost flex items-center space-x-2"
@@ -255,7 +337,10 @@ return (
         </div>
       )}
 
-      {/* NAVEGAÇÃO ENTRE OS MÓDULOS DE RESULTADO (TABS EM PÍLULA) */}
+            {/* FLUXO HAPPY-PATH: Gerar → Proposta → Kanban → Publicar */}
+      <PassosFluxoPublicacao estado={estadoFluxo} aoIrParaPasso={aoIrParaPassoFluxo} />
+
+{/* NAVEGAÇÃO ENTRE OS MÓDULOS DE RESULTADO (TABS EM PÍLULA) */}
       <div className="flex flex-wrap items-center gap-2">
         {TABS.map(tab => (
           <button
@@ -282,42 +367,50 @@ return (
             aoPersonalizarCampanha={(atualizacoes) => setCampanhaAtual(prev => ({ ...prev, ...atualizacoes }))}
           />
 
-          {/* MOCKUP VISUAL DE IMAGEM + COPY */}
+                    {/* MOCKUP VISUAL DE IMAGEM + COPY (conforme tier) */}
           {imagemCampanha.erro && <p role="status" className="text-sm text-amber-300">{imagemCampanha.erro}</p>}
-          <MediaPresets value={mediaPreset} onChange={setMediaPreset} />
 
-          <CardCampanhaMock
-            promptAplicado={imagemCampanha.promptAplicado}
-            campanha={campanhaAtual}
-            imagemUrl={imagemCampanha.imagemUrl}
-            carregandoImagem={imagemCampanha.carregando}
-            modoImagem={imagemCampanha.modo}
-            aoAlterarModoImagem={imagemCampanha.setModo}
-            aoRegenerarImagem={imagemCampanha.regenerar}
-            aoCarregarImagem={imagemCampanha.aoCarregarImagem}
-            aoErroImagem={imagemCampanha.aoErroImagem}
-            estiloSelecionado={imagemCampanha.estiloSelecionado}
-            aoSelecionarEstilo={imagemCampanha.selecionarEstilo}
-          />
+          {infoTier.incluiImagem && (
+            <div className="space-y-6">
+              {infoTier.mostraPresetsMidia && (
+                <MediaPresets value={mediaPreset} onChange={setMediaPreset} />
+              )}
+              <CardCampanhaMock
+                promptAplicado={imagemCampanha.promptAplicado}
+                campanha={campanhaAtual}
+                imagemUrl={imagemCampanha.imagemUrl}
+                carregandoImagem={imagemCampanha.carregando}
+                modoImagem={imagemCampanha.modo}
+                aoAlterarModoImagem={imagemCampanha.setModo}
+                aoRegenerarImagem={imagemCampanha.regenerar}
+                aoCarregarImagem={imagemCampanha.aoCarregarImagem}
+                aoErroImagem={imagemCampanha.aoErroImagem}
+                estiloSelecionado={imagemCampanha.estiloSelecionado}
+                aoSelecionarEstilo={imagemCampanha.selecionarEstilo}
+              />
+            </div>
+          )}
 
-          {/* ROTEIRO DE VÍDEO DETALHADO POR SEGUNDOS */}
-          <VisualizadorRoteiroVideo
-            key={`${diagnostico.id}-${estiloVideoSelecionado?.id || 'natural'}`}
-            roteiro={campanhaAtual.roteiroVideo}
-            tituloCampanha={campanhaAtual.tituloCampanha}
-            imagemVisualPrincipal={imagemVideoEstilizada || imagemCampanha.imagemUrl}
-            estiloSelecionado={estiloVideoSelecionado}
-            aoSelecionarEstilo={aoSelecionarEstiloVideo}
-            regenerandoRoteiro={regenerandoRoteiro}
-            erroRegeneracao={erroRegeneracaoRoteiro}
-            mediaPreset={mediaPreset}
-            aoAtualizarCena={(idx, patch) => {
-              setCampanhaAtual(prev => ({
-                ...prev,
-                roteiroVideo: prev.roteiroVideo.map((cena, i) => (i === idx ? { ...cena, ...patch } : cena))
-              }));
-            }}
-          />
+          {/* ROTEIRO DE VÍDEO — só nos tiers com vídeo */}
+          {infoTier.incluiVideo && (
+            <VisualizadorRoteiroVideo
+              key={`${diagnostico.id}-${estiloVideoSelecionado?.id || 'natural'}`}
+              roteiro={campanhaAtual.roteiroVideo}
+              tituloCampanha={campanhaAtual.tituloCampanha}
+              imagemVisualPrincipal={imagemVideoEstilizada || imagemCampanha.imagemUrl}
+              estiloSelecionado={estiloVideoSelecionado}
+              aoSelecionarEstilo={aoSelecionarEstiloVideo}
+              regenerandoRoteiro={regenerandoRoteiro}
+              erroRegeneracao={erroRegeneracaoRoteiro}
+              mediaPreset={mediaPreset}
+              aoAtualizarCena={(idx, patch) => {
+                setCampanhaAtual(prev => ({
+                  ...prev,
+                  roteiroVideo: prev.roteiroVideo.map((cena, i) => (i === idx ? { ...cena, ...patch } : cena))
+                }));
+              }}
+            />
+          )}
         </div>
       )}
 
@@ -334,7 +427,7 @@ return (
 
       {/* KANBAN DE ACOMPANHAMENTO */}
       {abaAtiva === 'kanban' && (
-        <CalendarioConteudo diagnosticoId={diagnostico.id} sinalDeAtualizacao={sinalDeAtualizacaoKanban} midiaMockUrl={imagemCampanha.imagemUrl} />
+        <CalendarioConteudo diagnosticoId={diagnostico.id} sinalDeAtualizacao={sinalDeAtualizacaoKanban} midiaMockUrl={imagemCampanha.imagemUrl} aoMudancaEventos={() => setSinalDeAtualizacaoKanban((n) => n + 1)} />
       )}
 
       {/* MÓDULO 2: ESTRATÉGIA DE CRESCIMENTO */}

@@ -4,8 +4,8 @@ import { Sparkles, LogOut, RefreshCw, Clapperboard, Compass } from 'lucide-react
 
 interface PropriedadesCabecalho {
   usuario: PerfilUsuario | null;
-  moduloAtivo: 'autenticacao' | 'diagnostico' | 'carregamento' | 'resultados';
-  aoNavegarPara: (modulo: 'autenticacao' | 'diagnostico' | 'carregamento' | 'resultados') => void;
+  moduloAtivo: 'autenticacao' | 'diagnostico' | 'carregamento' | 'escolha-tier' | 'resultados';
+  aoNavegarPara: (modulo: 'autenticacao' | 'diagnostico' | 'carregamento' | 'escolha-tier' | 'resultados') => void;
   aoSair: () => void;
   aoReiniciarDiagnostico: () => void;
 }
@@ -51,8 +51,8 @@ export const CabecalhoSaaS: React.FC<PropriedadesCabecalho> = ({
 
             <button
               onClick={() => aoNavegarPara('resultados')}
-              disabled={moduloAtivo === 'diagnostico'}
-              className={`gb-tab flex items-center space-x-2 ${moduloAtivo === 'resultados' ? 'gb-tab-active' : ''}`}
+              disabled={moduloAtivo === 'diagnostico' || moduloAtivo === 'carregamento'}
+              className={`gb-tab flex items-center space-x-2 ${moduloAtivo === 'resultados' || moduloAtivo === 'escolha-tier' ? 'gb-tab-active' : ''}`}
             >
               <Clapperboard className="w-3.5 h-3.5" />
               <span>Módulos 2, 3 & 4: Resultados</span>

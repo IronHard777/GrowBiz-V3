@@ -38,6 +38,8 @@ import {
 interface PropriedadesCalendario {
   diagnosticoId: string;
   sinalDeAtualizacao?: number;
+  /** Notifica o pai (ex.: stepper) apos CRUD/publicacao local. */
+  aoMudancaEventos?: () => void;
   /** Imagem/video gerado na aba Mocks de Conteudo — usado na publicacao se o card nao tiver URL. */
   midiaMockUrl?: string | null;
 }
@@ -74,7 +76,7 @@ function URL_HTTPS_VALIDA_PARA_PUBLICAR(imagemUrl?: string | null): boolean {
   return true;
 }
 
-export const CalendarioConteudo: React.FC<PropriedadesCalendario> = ({ diagnosticoId, sinalDeAtualizacao, midiaMockUrl }) => {
+export const CalendarioConteudo: React.FC<PropriedadesCalendario> = ({ diagnosticoId, sinalDeAtualizacao, midiaMockUrl, aoMudancaEventos }) => {
   const [eventos, setEventos] = useState<EventoCalendarioConteudo[]>([]);
   const [sessaoIg, setSessaoIg] = useState<SessaoInstagram | null>(() => OBTER_SESSAO_INSTAGRAM());
   const [metaConfigurado, setMetaConfigurado] = useState<boolean>(false);
@@ -283,6 +285,7 @@ useEffect(() => {
       recarregarEventos();
       setErroCardIg(null);
       setMsgIg('Publicado no Instagram com sucesso.');
+      aoMudancaEventos?.();
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Falha ao publicar no Instagram.';
       setMsgIg(msg);
