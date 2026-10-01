@@ -1,22 +1,40 @@
 import React from 'react';
 import { PerfilUsuario } from '../tipos';
+import { IdTierPlano } from '../tipos/tierPlano';
 import { Sparkles, LogOut, RefreshCw, Clapperboard, Compass } from 'lucide-react';
+
+type ModuloId = 'autenticacao' | 'diagnostico' | 'carregamento' | 'escolha-tier' | 'resultados';
 
 interface PropriedadesCabecalho {
   usuario: PerfilUsuario | null;
-  moduloAtivo: 'autenticacao' | 'diagnostico' | 'carregamento' | 'escolha-tier' | 'resultados';
-  aoNavegarPara: (modulo: 'autenticacao' | 'diagnostico' | 'carregamento' | 'escolha-tier' | 'resultados') => void;
+  moduloAtivo: ModuloId;
+  tierSelecionado?: IdTierPlano | null;
+  temResultado?: boolean;
+  aoNavegarPara: (modulo: ModuloId) => void;
   aoSair: () => void;
   aoReiniciarDiagnostico: () => void;
+  aoTrocarTier?: () => void;
 }
 
 export const CabecalhoSaaS: React.FC<PropriedadesCabecalho> = ({
   usuario,
   moduloAtivo,
+  tierSelecionado = null,
+  temResultado = false,
   aoNavegarPara,
   aoSair,
-  aoReiniciarDiagnostico
+  aoReiniciarDiagnostico,
+  aoTrocarTier
 }) => {
+  // escolha-tier antes do diagnostico faz parte do Modulo 1; apos resultado (Trocar plano) destaca Resultados
+  const destaqueDiagnostico =
+    moduloAtivo === 'diagnostico' ||
+    moduloAtivo === 'carregamento' ||
+    (moduloAtivo === 'escolha-tier' && !temResultado);
+  const destaqueResultados =
+    moduloAtivo === 'resultados' ||
+    (moduloAtivo === 'escolha-tier' && temResultado);
+
   return (
     <header className="text-white sticky top-0 z-50 backdrop-blur-md bg-[#0b0f1a]/85 border-b border-white/10 shadow-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -38,24 +56,24 @@ export const CabecalhoSaaS: React.FC<PropriedadesCabecalho> = ({
           </div>
         </div>
 
-        {/* NAVEGAÇÃO DOS MÓDULOS */}
+        {/* NAVEGACAO DOS MODULOS */}
         {usuario && moduloAtivo !== 'autenticacao' && (
           <nav className="hidden md:flex items-center gap-1.5">
             <button
-              onClick={() => aoNavegarPara('diagnostico')}
-              className={`gb-tab flex items-center space-x-2 ${moduloAtivo === 'diagnostico' ? 'gb-tab-active' : ''}`}
+              onClick={() => aoNavegarPara(tierSelecionado ? 'diagnostico' : 'escolha-tier')}
+              className={`gb-tab flex items-center space-x-2 ${destaqueDiagnostico ? 'gb-tab-active' : ''}`}
             >
               <Compass className="w-3.5 h-3.5" />
-              <span>Módulo 1: Diagnóstico</span>
+              <span>Modulo 1: Diagnostico</span>
             </button>
 
             <button
               onClick={() => aoNavegarPara('resultados')}
-              disabled={moduloAtivo === 'diagnostico' || moduloAtivo === 'carregamento'}
-              className={`gb-tab flex items-center space-x-2 ${moduloAtivo === 'resultados' || moduloAtivo === 'escolha-tier' ? 'gb-tab-active' : ''}`}
+              disabled={moduloAtivo === 'diagnostico' || moduloAtivo === 'carregamento' || (moduloAtivo === 'escolha-tier' && !temResultado)}
+              className={`gb-tab flex items-center space-x-2 ${destaqueResultados ? 'gb-tab-active' : ''}`}
             >
               <Clapperboard className="w-3.5 h-3.5" />
-              <span>Módulos 2, 3 & 4: Resultados</span>
+              <span>Modulos 2, 3 & 4: Resultados</span>
             </button>
           </nav>
         )}
@@ -73,9 +91,19 @@ export const CabecalhoSaaS: React.FC<PropriedadesCabecalho> = ({
                 <span className="text-xs font-bold text-white">{usuario.nomeEmpresaOuUsuario}</span>
                 <span className="text-[10px] font-mono text-blue-400 uppercase tracking-widest">{usuario.setor || 'Setor Mapeado'}</span>
               </div>
+              {tierSelecionado && aoTrocarTier && moduloAtivo !== 'escolha-tier' && (
+                <button
+                  onClick={aoTrocarTier}
+                  title="Trocar formato do plano"
+                  className="hidden md:inline-flex p-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-700 transition-colors items-center gap-1.5 text-xs font-medium"
+                >
+                  <Sparkles className="w-4 h-4 text-amber-400" />
+                  <span className="hidden xl:inline text-[11px] font-mono uppercase">Trocar plano</span>
+                </button>
+              )}
               <button
                 onClick={aoReiniciarDiagnostico}
-                title="Novo Diagnóstico IA"
+                title="Novo Diagnostico IA"
                 className="p-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-700 transition-colors flex items-center gap-1.5 text-xs font-medium"
               >
                 <RefreshCw className="w-4 h-4 text-blue-400" />
@@ -99,4 +127,3 @@ export const CabecalhoSaaS: React.FC<PropriedadesCabecalho> = ({
     </header>
   );
 };
-

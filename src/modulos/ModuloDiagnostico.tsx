@@ -12,10 +12,13 @@ import {
   VALOR_OPCAO_OUTROS
 } from '../servicos/servicoDiagnostico';
 import { Brain, Sparkles, CheckCircle2, ChevronRight, ArrowRight } from 'lucide-react';
+import { IdTierPlano, OBTER_TIER } from '../tipos/tierPlano';
 
 interface PropriedadesDiagnostico {
   usuario: PerfilUsuario;
+  tier: IdTierPlano;
   aoConcluirDiagnostico: (diagnostico: DiagnosticoCompleto) => void;
+  aoTrocarTier?: () => void;
 }
 
 const RESPOSTAS_INICIAIS: RespostasFiltroSetePerguntas = {
@@ -32,7 +35,17 @@ function rotuloQuadrante(categoria: CategoriaModeloNegocio): string {
   return `Q${categoria.quadrante} · ${categoria.categoria}`;
 }
 
-export const ModuloDiagnostico: React.FC<PropriedadesDiagnostico> = ({ usuario, aoConcluirDiagnostico }) => {
+export const ModuloDiagnostico: React.FC<PropriedadesDiagnostico> = ({ usuario, tier, aoConcluirDiagnostico, aoTrocarTier }) => {
+  const infoTier = OBTER_TIER(tier);
+  const eEnxuto = tier.startsWith('enxuto_');
+  const rotuloMidia = [
+    infoTier.incluiImagem ? 'imagens' : null,
+    infoTier.incluiVideo ? 'videos' : null
+  ].filter(Boolean).join(' + ') || 'midia';
+  const badgePlano = eEnxuto
+    ? `Plano: Enxuto · só ${rotuloMidia}`
+    : `Plano: Completo · ${rotuloMidia}`;
+
   const [nomeNegocio, setNomeNegocio] = useState<string>(usuario.nomeEmpresaOuUsuario || '');
   const [setor, setSetor] = useState<string>(usuario.setor || 'Cafeteria e Varejo');
   const [modeloOperacional, setModeloOperacional] = useState<ModeloOperacional>(usuario.modeloOperacional || 'Presencial');
@@ -131,15 +144,36 @@ export const ModuloDiagnostico: React.FC<PropriedadesDiagnostico> = ({ usuario, 
 
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
-            <div className="inline-flex items-center space-x-2 bg-blue-500/10 text-blue-400 border border-blue-500/20 px-3 py-1 rounded-full text-xs font-mono font-bold uppercase tracking-wider mb-3">
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+            <div className="inline-flex items-center space-x-2 bg-blue-500/10 text-blue-400 border border-blue-500/20 px-3 py-1 rounded-full text-xs font-mono font-bold uppercase tracking-wider">
               <Brain className="w-4 h-4" />
-              <span>Módulo 1: Diagnóstico (7 Perguntas)</span>
+              <span>Modulo 1: Diagnostico (7 Perguntas)</span>
             </div>
+            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-mono font-bold uppercase tracking-wider border ${
+              eEnxuto
+                ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+            }`}>
+              {badgePlano}
+            </span>
+            {aoTrocarTier && (
+              <button
+                type="button"
+                onClick={aoTrocarTier}
+                className="text-[11px] text-slate-400 hover:text-blue-300 underline underline-offset-2 transition-colors"
+                title="Trocar formato do plano"
+              >
+                Trocar plano
+              </button>
+            )}
+          </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
               Investigação Estratégica & Sensoriamento
             </h1>
             <p className="text-xs sm:text-sm text-slate-400 mt-2 max-w-2xl leading-relaxed">
-              Mapeie o negócio no <strong className="text-slate-200 font-mono">Filtro de 7 Perguntas</strong> (única ou múltipla escolha + Outros) e posicione o modelo nos eixos ciclo de venda × escala.
+              {eEnxuto
+                ? <>Mapeie o negocio no <strong className="text-slate-200 font-mono">Filtro de 7 Perguntas</strong> para gerar campanha leve com presets de midia ({rotuloMidia}).</>
+                : <>Mapeie o negocio no <strong className="text-slate-200 font-mono">Filtro de 7 Perguntas</strong> (unica ou multipla escolha + Outros) e posicione o modelo nos eixos ciclo de venda × escala.</>}
             </p>
           </div>
 

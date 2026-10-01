@@ -5,13 +5,19 @@ import { IdTierPlano, TIERS_PLANO, OBTER_TIER } from '../tipos/tierPlano';
 interface PropriedadesEscolhaTier {
   aoEscolher: (id: IdTierPlano) => void;
   tierAtual?: IdTierPlano | null;
+  /** true quando veio de Trocar plano (ja tem resultado da IA) */
+  jaTemResultado?: boolean;
 }
 
 function eCompleto(id: IdTierPlano): boolean {
   return id.startsWith('completo_');
 }
 
-export const ModuloEscolhaTier: React.FC<PropriedadesEscolhaTier> = ({ aoEscolher, tierAtual }) => {
+export const ModuloEscolhaTier: React.FC<PropriedadesEscolhaTier> = ({
+  aoEscolher,
+  tierAtual,
+  jaTemResultado = false
+}) => {
   const [selecionado, setSelecionado] = useState<IdTierPlano | null>(tierAtual ?? null);
 
   const confirmar = () => {
@@ -30,11 +36,12 @@ export const ModuloEscolhaTier: React.FC<PropriedadesEscolhaTier> = ({ aoEscolhe
           </span>
         </div>
         <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-          Escolha o formato do plano para continuar
+          {jaTemResultado ? 'Trocar formato do plano' : 'Escolha o formato do plano para continuar'}
         </h1>
         <p className="text-sm text-slate-400 mt-2 max-w-2xl leading-relaxed">
-          O diagnóstico já foi gerado. Agora escolha se deseja o formato Enxuto (presets de mídia)
-          ou Completo (estratégia e estilo visual nas categorias do mock).
+          {jaTemResultado
+            ? 'Altere o formato do plano. O diagnostico ja gerado sera mantido — ao Continuar voce volta aos resultados com o novo tier.'
+            : 'Escolha o formato do plano antes das 7 perguntas. Enxuto usa presets de midia; Completo enfatiza estrategia e estilo visual nas categorias do mock.'}
         </p>
       </div>
 
@@ -107,7 +114,7 @@ export const ModuloEscolhaTier: React.FC<PropriedadesEscolhaTier> = ({ aoEscolhe
           onClick={confirmar}
           className="gb-btn flex items-center gap-2 px-6 py-3 disabled:opacity-40"
         >
-          <span>Continuar</span>
+          <span>{jaTemResultado ? 'Continuar para resultados' : 'Continuar para o diagnostico'}</span>
           <ArrowRight className="w-4 h-4" />
         </button>
       </div>

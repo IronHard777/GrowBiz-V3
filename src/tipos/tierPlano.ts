@@ -1,7 +1,7 @@
 /**
- * GrowBiz V3 — Tiers de plano (seleção pós-diagnóstico).
- * Completo = produto full (diagnóstico/estratégia já feitos no app).
- * Enxuto = formato leve com presets de mídia; sem ênfase em estratégia completa.
+ * GrowBiz V3 — Tiers de plano (selecao pre-diagnostico).
+ * Completo = produto full (diagnostico/estrategia no app).
+ * Enxuto = formato leve com presets de midia; sem enfase em estrategia completa.
  */
 
 export type IdTierPlano =

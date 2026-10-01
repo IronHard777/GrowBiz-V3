@@ -12,9 +12,11 @@ import { ModuloResultadosMocks } from './modulos/ModuloResultadosMocks';
 import { ModuloEscolhaTier } from './modulos/ModuloEscolhaTier';
 import { IdTierPlano } from './tipos/tierPlano';
 
+type ModuloId = 'autenticacao' | 'diagnostico' | 'carregamento' | 'escolha-tier' | 'resultados';
+
 export default function App() {
   const [usuario, setUsuario] = useState<PerfilUsuario | null>(null);
-  const [moduloAtivo, setModuloAtivo] = useState<'autenticacao' | 'diagnostico' | 'carregamento' | 'escolha-tier' | 'resultados'>('autenticacao');
+  const [moduloAtivo, setModuloAtivo] = useState<ModuloId>('autenticacao');
   const [tierSelecionado, setTierSelecionado] = useState<IdTierPlano | null>(null);
   
   // Estado de processamento da IA
@@ -24,18 +26,18 @@ export default function App() {
   // Resultado gerado
   const [resultadoConsultoria, setResultadoConsultoria] = useState<ResultadoCompletoConsultoria | null>(null);
 
-  // Carregar sessão ao iniciar
+  // Carregar sessão ao iniciar → escolha de tier antes do diagnóstico
   useEffect(() => {
     const usuarioSalvo = OBTER_USUARIO_LOGADO();
     if (usuarioSalvo) {
       setUsuario(usuarioSalvo);
-      setModuloAtivo('diagnostico');
+      setModuloAtivo('escolha-tier');
     }
   }, []);
 
   const aoAutenticarUsuario = (usuarioLogado: PerfilUsuario) => {
     setUsuario(usuarioLogado);
-    setModuloAtivo('diagnostico');
+    setModuloAtivo('escolha-tier');
   };
 
   const aoSairDaConta = () => {
@@ -47,6 +49,11 @@ export default function App() {
   };
 
   const iniciarDiagnosticoComIA = async (diagnostico: DiagnosticoCompleto) => {
+    if (!tierSelecionado) {
+      setModuloAtivo('escolha-tier');
+      return;
+    }
+
     setModuloAtivo('carregamento');
     setPercentualCarregamento(5);
     setTextoCarregamento('Iniciando análise com AI Core...');
@@ -61,7 +68,7 @@ export default function App() {
       );
 
       setResultadoConsultoria(resultadoFinal);
-      setModuloAtivo('escolha-tier');
+      setModuloAtivo('resultados');
     } catch (e) {
       console.error("Erro no processamento da IA:", e);
       // Fallback seguro
@@ -76,27 +83,48 @@ export default function App() {
         kpisSimulados: kpis,
         alertaPivotagem: alerta
       });
-      setModuloAtivo('escolha-tier');
+      setModuloAtivo('resultados');
     }
   };
 
   const aoReiniciarDiagnostico = () => {
-    setTierSelecionado(null);
-    setModuloAtivo('diagnostico');
+    setResultadoConsultoria(null);
+    // Mantém o plano: Novo Filtro volta às 7 perguntas; sem tier → escolha-tier
+    setModuloAtivo(tierSelecionado ? 'diagnostico' : 'escolha-tier');
   };
 
   const aoEscolherTier = (id: IdTierPlano) => {
     setTierSelecionado(id);
-    setModuloAtivo('resultados');
+    // Já tem resultado (Trocar plano): volta aos resultados com o novo tier, sem re-rodar IA
+    // Ainda sem diagnóstico: segue para as 7 perguntas
+    if (resultadoConsultoria) {
+      setModuloAtivo('resultados');
+    } else {
+      setModuloAtivo('diagnostico');
+    }
   };
 
   const aoTrocarTier = () => {
     setModuloAtivo('escolha-tier');
   };
 
-  const aoNavegarModulo = (mod: 'autenticacao' | 'diagnostico' | 'carregamento' | 'escolha-tier' | 'resultados') => {
-    if (mod === 'resultados' && resultadoConsultoria && !tierSelecionado) {
+  const aoNavegarModulo = (mod: ModuloId) => {
+    if (mod === 'autenticacao' || mod === 'escolha-tier') {
+      setModuloAtivo(mod);
+      return;
+    }
+    // Guard: diagnóstico / carregamento / resultados exigem tier
+    if (!tierSelecionado) {
       setModuloAtivo('escolha-tier');
+      return;
+    }
+    if (mod === 'resultados' && !resultadoConsultoria) {
+      setModuloAtivo('diagnostico');
+      return;
+    }
+    if (mod === 'carregamento') {
+      // Não navegar manualmente para o loading
+      setModuloAtivo(resultadoConsultoria ? 'resultados' : 'diagnostico');
       return;
     }
     setModuloAtivo(mod);
@@ -109,9 +137,12 @@ export default function App() {
       <CabecalhoSaaS
         usuario={usuario}
         moduloAtivo={moduloAtivo}
+        tierSelecionado={tierSelecionado}
+        temResultado={!!resultadoConsultoria}
         aoNavegarPara={aoNavegarModulo}
         aoSair={aoSairDaConta}
         aoReiniciarDiagnostico={aoReiniciarDiagnostico}
+        aoTrocarTier={aoTrocarTier}
       />
 
       {/* CONTEÚDO PRINCIPAL DO MÓDULO */}
@@ -120,19 +151,25 @@ export default function App() {
           <ModuloAutenticacao aoAutenticar={aoAutenticarUsuario} />
         )}
 
-        {moduloAtivo === 'diagnostico' && usuario && (
-          <ModuloDiagnostico usuario={usuario} aoConcluirDiagnostico={iniciarDiagnosticoComIA} />
+        {moduloAtivo === 'escolha-tier' && usuario && (
+          <ModuloEscolhaTier
+            aoEscolher={aoEscolherTier}
+            tierAtual={tierSelecionado}
+            jaTemResultado={!!resultadoConsultoria}
+          />
+        )}
+
+        {moduloAtivo === 'diagnostico' && usuario && tierSelecionado && (
+          <ModuloDiagnostico
+            usuario={usuario}
+            tier={tierSelecionado}
+            aoConcluirDiagnostico={iniciarDiagnosticoComIA}
+            aoTrocarTier={aoTrocarTier}
+          />
         )}
 
         {moduloAtivo === 'carregamento' && (
           <ModuloCarregamentoIA etapaTexto={textoCarregamento} percentual={percentualCarregamento} />
-        )}
-
-        {moduloAtivo === 'escolha-tier' && resultadoConsultoria && (
-          <ModuloEscolhaTier
-            aoEscolher={aoEscolherTier}
-            tierAtual={tierSelecionado}
-          />
         )}
 
         {moduloAtivo === 'resultados' && resultadoConsultoria && tierSelecionado && (
@@ -148,8 +185,8 @@ export default function App() {
       {/* RODAPÉ DISCRETO */}
       <footer className="border-t border-slate-900/80 py-6 text-center text-xs text-slate-500">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>Plataforma SaaS "7777" (LetsGrow) • Produto: GrowBiz V2.2</span>
-          <span>Consultor Estratégico Omnichannel Proativo 24/7 • Clean Code PT-BR</span>
+          <span>Plataforma SaaS "7777" (LetsGrow) · Produto: GrowBiz V2.2</span>
+          <span>Consultor Estratégico Omnichannel Proativo 24/7 · Clean Code PT-BR</span>
         </div>
       </footer>
 
