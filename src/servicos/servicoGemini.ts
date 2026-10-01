@@ -45,12 +45,16 @@ export function TEM_CHAVE_GEMINI_CONFIGURADA(): boolean {
   return cacheChaveConfigurada !== false;
 }
 
+/** Cliente aborta ~10s antes do maxDuration 60s do server (/api/ia) para soft-fallback na UI. */
+const TIMEOUT_FETCH_IA_MS = 50_000;
+
 async function chamarIa<T>(action: string, payload: Record<string, unknown> = {}): Promise<T | null> {
   try {
     const resp = await fetch('/api/ia', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action, ...payload })
+      body: JSON.stringify({ action, ...payload }),
+      signal: AbortSignal.timeout(TIMEOUT_FETCH_IA_MS)
     });
     if (!resp.ok) {
       console.warn(`api/ia (${action}) HTTP ${resp.status}`);
@@ -92,8 +96,8 @@ export async function GERAR_COPY_PERSUASIVA_GEMINI(
   return chamarIa('copy', { diagnostico, objetivo, anexos });
 }
 
-export async function GERAR_IMAGEM_IMAGEN3(prompt: string): Promise<string | null> {
-  const r = await chamarIa<{ imagem: string | null }>('imagem', { prompt });
+export async function GERAR_IMAGEM_IMAGEN3(prompt: string, aspectRatio: string = '9:16'): Promise<string | null> {
+  const r = await chamarIa<{ imagem: string | null }>('imagem', { prompt, aspectRatio });
   return r?.imagem ?? null;
 }
 

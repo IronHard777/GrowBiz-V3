@@ -187,6 +187,9 @@ function parseClassificacaoJev(resultado: unknown): ClassificacaoJev | null {
 /**
  * Classifica o diagnostico via Jev (overlay). Retorna null em qualquer falha.
  */
+/** Alinhado ao timeout do cliente /api/ia — soft-fallback (null) se Jev travar. */
+const TIMEOUT_FETCH_JEV_MS = 50_000;
+
 export async function CLASSIFICAR_MODELO_NEGOCIO_JEV(
   entrada: EntradaClassificacaoJev
 ): Promise<ClassificacaoJev | null> {
@@ -197,7 +200,8 @@ export async function CLASSIFICAR_MODELO_NEGOCIO_JEV(
       body: JSON.stringify({
         prompt: montarPromptClassificacao(entrada),
         schema: SCHEMA_CLASSIFICACAO_MODELO_NEGOCIO
-      })
+      }),
+      signal: AbortSignal.timeout(TIMEOUT_FETCH_JEV_MS)
     });
 
     if (!resp.ok) {
