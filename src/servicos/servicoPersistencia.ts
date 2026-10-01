@@ -172,9 +172,17 @@ export function OBTER_EVENTOS_CALENDARIO(): EventoCalendarioConteudo[] {
   return eventos;
 }
 
+/** Nunca persiste data URLs enormes (base64) no localStorage dos eventos. */
+function sanitizarImagemUrlEvento(url: string | undefined): string | undefined {
+  const u = (url || '').trim();
+  if (!u) return undefined;
+  if (/^data:/i.test(u)) return undefined;
+  return u;
+}
+
 export function CRIAR_EVENTO_CALENDARIO(evento: EventoCalendarioConteudo): void {
   const eventos = OBTER_EVENTOS_CALENDARIO();
-  eventos.push(evento);
+  eventos.push({ ...evento, imagemUrl: sanitizarImagemUrlEvento(evento.imagemUrl) });
   salvarColecao(CHAVES.EVENTOS_CALENDARIO, eventos);
 }
 
@@ -182,7 +190,7 @@ export function ATUALIZAR_EVENTO_CALENDARIO(evento: EventoCalendarioConteudo): v
   const eventos = OBTER_EVENTOS_CALENDARIO();
   const idx = eventos.findIndex(e => e.id === evento.id);
   if (idx >= 0) {
-    eventos[idx] = evento;
+    eventos[idx] = { ...evento, imagemUrl: sanitizarImagemUrlEvento(evento.imagemUrl) };
     salvarColecao(CHAVES.EVENTOS_CALENDARIO, eventos);
   }
 }

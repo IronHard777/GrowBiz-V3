@@ -101,17 +101,24 @@ export const CalendarioConteudo: React.FC<PropriedadesCalendario> = ({ diagnosti
   };
 
   
-  // Sincroniza midia dos Mocks de Conteudo nos cards deste diagnostico (sem sobrescrever URL HTTPS manual).
+  // Sincroniza midia HTTPS dos Mocks nos cards (nunca grava data: base64; nao sobrescreve HTTPS manual).
   useEffect(() => {
     const mock = (midiaMockUrl || '').trim();
     if (!mock) return;
+    if (/^data:/i.test(mock)) return;
+    if (!/^https:\/\//i.test(mock)) return;
     if (/unsplash|picsum|placehold/i.test(mock)) return;
     const lista = OBTER_EVENTOS_CALENDARIO().filter((e) => e.diagnosticoId === diagnosticoId);
     let mudou = false;
     for (const evt of lista) {
       const atual = (evt.imagemUrl || '').trim();
-      if (atual && !/unsplash|picsum|placehold/i.test(atual) && !atual.startsWith('data:')) continue;
       if (atual === mock) continue;
+      // Atualiza se ausente, estoque, ou data: residual
+      const precisaTrocar =
+        !atual ||
+        /^data:/i.test(atual) ||
+        /unsplash|picsum|placehold/i.test(atual);
+      if (!precisaTrocar) continue;
       ATUALIZAR_EVENTO_CALENDARIO({ ...evt, imagemUrl: mock });
       mudou = true;
     }
@@ -249,7 +256,8 @@ useEffect(() => {
         mediaType,
         onProgress: (msg) => setMsgIg(msg)
       });
-      ATUALIZAR_EVENTO_CALENDARIO({ ...evt, status: 'publicado' });
+      // Inclui imagemUrl: urlPublica para nao apagar o HTTPS gravado acima
+      ATUALIZAR_EVENTO_CALENDARIO({ ...evt, imagemUrl: urlPublica, status: 'publicado' });
       recarregarEventos();
       setMsgIg('Publicado no Instagram com sucesso.');
     } catch (e) {

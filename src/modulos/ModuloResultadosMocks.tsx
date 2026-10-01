@@ -1,5 +1,5 @@
 import { MONTAR_PROMPT_VISUAL } from '../servicos/servicoContextoVisual';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MockCampanhaConteudo, ResultadoCompletoConsultoria, PropostaCampanha, CanalPublicacao } from '../tipos';
 import { CardCampanhaMock } from '../componentes/CardCampanhaMock';
 import { VisualizadorRoteiroVideo } from '../componentes/VisualizadorRoteiroVideo';
@@ -11,8 +11,9 @@ import { ModuloPropostasCampanha } from '../componentes/ModuloPropostasCampanha'
 import { useImagemCampanhaIA } from '../hooks/useImagemCampanhaIA';
 import { CategoriaEstilo } from '../servicos/servicoCategoriasEstilo';
 import { GERAR_ROTEIRO_VIDEO_COM_ESTILO_GEMINI, GERAR_IMAGEM_IMAGEN3 } from '../servicos/servicoGemini';
-import { CRIAR_EVENTO_CALENDARIO } from '../servicos/servicoPersistencia';
+import { CRIAR_EVENTO_CALENDARIO, ATUALIZAR_EVENTO_CALENDARIO, OBTER_EVENTOS_CALENDARIO } from '../servicos/servicoPersistencia';
 import { Sparkles, Compass, Clapperboard, BarChart3, RefreshCw, CheckCircle2, LayoutGrid } from 'lucide-react';
+import { MediaPresets, appendPresetToPrompt, type PresetSelection } from '../components/media/MediaPresets';
 
 type AbaResultados = 'modulo3' | 'propostas' | 'kanban' | 'modulo2' | 'modulo4';
 
@@ -31,6 +32,11 @@ export const ModuloResultadosMocks: React.FC<PropriedadesResultados> = ({ result
   // Imagem do player de vídeo, independente da imagem do mockup estático — só existe depois que
   // o cliente escolhe uma categoria de vídeo (antes disso, o player usa a imagem compartilhada).
   const [imagemVideoEstilizada, setImagemVideoEstilizada] = useState<string | null>(null);
+  const [mediaPreset, setMediaPreset] = useState<PresetSelection>({
+    type: 'image',
+    ratio: '9:16',
+    style: 'realistic'
+  });
   // Propostas de campanha já enviadas ao Kanban, e sinal para o Kanban recarregar do localStorage.
   const [propostasAdicionadasIds, setPropostasAdicionadasIds] = useState<string[]>([]);
   const [sinalDeAtualizacaoKanban, setSinalDeAtualizacaoKanban] = useState<number>(0);
@@ -39,7 +45,29 @@ export const ModuloResultadosMocks: React.FC<PropriedadesResultados> = ({ result
 
   // Única fonte da imagem visual da campanha — compartilhada entre o mockup estático e o
   // player de vídeo, para que ambos mostrem exatamente a mesma imagem gerada/personalizada.
-  const imagemCampanha = useImagemCampanhaIA(campanhaAtual, diagnostico);
+  const imagemCampanha = useImagemCampanhaIA(campanhaAtual, diagnostico, mediaPreset);
+
+  // Sincroniza URL HTTPS nos cards mesmo sem a aba Kanban montada
+  useEffect(() => {
+    const url = (imagemCampanha.imagemUrl || '').trim();
+    if (!url || !/^https:\/\//i.test(url)) return;
+    if (/unsplash|picsum|placehold/i.test(url)) return;
+    const lista = OBTER_EVENTOS_CALENDARIO().filter((e) => e.diagnosticoId === diagnostico.id);
+    let mudou = false;
+    for (const evt of lista) {
+      const atual = (evt.imagemUrl || '').trim();
+      if (atual === url) continue;
+      const precisaTrocar =
+        !atual ||
+        /^data:/i.test(atual) ||
+        /unsplash|picsum|placehold/i.test(atual);
+      if (!precisaTrocar) continue;
+      ATUALIZAR_EVENTO_CALENDARIO({ ...evt, imagemUrl: url });
+      mudou = true;
+    }
+    if (mudou) setSinalDeAtualizacaoKanban((n) => n + 1);
+  }, [imagemCampanha.imagemUrl, diagnostico.id]);
+
 
   const aplicarPivotagem = () => {
     setNotificacaoPivotagem(true);
@@ -57,11 +85,14 @@ export const ModuloResultadosMocks: React.FC<PropriedadesResultados> = ({ result
       // Regenera roteiro (texto) e imagem do player (visual) em paralelo — antes só o texto
       // mudava e a prévia do player continuava sempre com a mesma foto, dando a impressão de
       // que a escolha de categoria não fazia nada.
-      const promptImagemEstilizada = MONTAR_PROMPT_VISUAL(diagnostico, campanhaAtual, categoria.modificadorImagemIngles);
+      const promptImagemEstilizada = appendPresetToPrompt(
+        MONTAR_PROMPT_VISUAL(diagnostico, campanhaAtual, categoria.modificadorImagemIngles),
+        { ...mediaPreset, type: 'video' }
+      );
 
       const [novoRoteiro, novaImagem] = await Promise.all([
         GERAR_ROTEIRO_VIDEO_COM_ESTILO_GEMINI(diagnostico, campanhaAtual, categoria.nome, categoria.modificadorPrompt),
-        GERAR_IMAGEM_IMAGEN3(promptImagemEstilizada)
+        GERAR_IMAGEM_IMAGEN3(promptImagemEstilizada, mediaPreset.ratio)
       ]);
 
       if (novoRoteiro) {
@@ -106,7 +137,11 @@ export const ModuloResultadosMocks: React.FC<PropriedadesResultados> = ({ result
 
   const aoAdicionarPropostaAoKanban = (proposta: PropostaCampanha) => {
     const midia = (imagemCampanha.imagemUrl || '').trim();
-    const midiaOk = Boolean(midia && !/unsplash|picsum|placehold/i.test(midia));
+    const midiaOk = Boolean(
+      midia &&
+      /^https:\/\//i.test(midia) &&
+      !/unsplash|picsum|placehold/i.test(midia)
+    );
     CRIAR_EVENTO_CALENDARIO({
       id: `evt_${proposta.id}`,
       diagnosticoId: diagnostico.id,
@@ -247,6 +282,8 @@ return (
 
           {/* MOCKUP VISUAL DE IMAGEM + COPY */}
           {imagemCampanha.erro && <p role="status" className="text-sm text-amber-300">{imagemCampanha.erro}</p>}
+          <MediaPresets value={mediaPreset} onChange={setMediaPreset} />
+
           <CardCampanhaMock
             promptAplicado={imagemCampanha.promptAplicado}
             campanha={campanhaAtual}
@@ -271,6 +308,7 @@ return (
             aoSelecionarEstilo={aoSelecionarEstiloVideo}
             regenerandoRoteiro={regenerandoRoteiro}
             erroRegeneracao={erroRegeneracaoRoteiro}
+            mediaPreset={mediaPreset}
             aoAtualizarCena={(idx, patch) => {
               setCampanhaAtual(prev => ({
                 ...prev,

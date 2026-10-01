@@ -2,6 +2,8 @@ import { MONTAR_PROMPT_VISUAL } from '../servicos/servicoContextoVisual';
 import { useEffect, useState } from 'react';
 import { MockCampanhaConteudo, DiagnosticoCompleto } from '../tipos';
 import { GERAR_IMAGEM_IMAGEN3 } from '../servicos/servicoGemini';
+import { HOSPEDAR_MIDIA_DATA_URL } from '../servicos/servicoInstagram';
+import { appendPresetToPrompt, type PresetSelection } from '../components/media/MediaPresets';
 import { IDENTIFICAR_CATEGORIA_VISUAL, OBTER_DEFINICAO_CATEGORIA_VISUAL } from '../servicos/servicoCategoriasVisuais';
 import { CategoriaEstilo } from '../servicos/servicoCategoriasEstilo';
 
@@ -10,7 +12,11 @@ import { CategoriaEstilo } from '../servicos/servicoCategoriasEstilo';
  * Após o diagnóstico o quadro começa vazio — sem Unsplash automático.
  * Só carrega imagem ao gerar com IA (ou ao escolher explicitamente "Foto Setor").
  */
-export function useImagemCampanhaIA(campanha: MockCampanhaConteudo, diagnostico: DiagnosticoCompleto) {
+export function useImagemCampanhaIA(
+  campanha: MockCampanhaConteudo,
+  diagnostico: DiagnosticoCompleto,
+  mediaPreset?: PresetSelection
+) {
   const [erro, setErro] = useState<string | null>(null);
   const [imagemUrl, setImagemUrl] = useState<string>('');
   const [carregando, setCarregando] = useState<boolean>(false);
@@ -21,7 +27,11 @@ export function useImagemCampanhaIA(campanha: MockCampanhaConteudo, diagnostico:
 
   const categoria = IDENTIFICAR_CATEGORIA_VISUAL(diagnostico.setor, diagnostico.nomeNegocio);
   const definicaoCategoria = OBTER_DEFINICAO_CATEGORIA_VISUAL(categoria);
-  const promptAplicado = MONTAR_PROMPT_VISUAL(diagnostico, campanha, estiloSelecionado?.modificadorPrompt);
+  const promptBase = MONTAR_PROMPT_VISUAL(diagnostico, campanha, estiloSelecionado?.modificadorPrompt);
+  const promptAplicado = mediaPreset
+    ? appendPresetToPrompt(promptBase, mediaPreset)
+    : promptBase;
+  const aspectRatio = mediaPreset?.ratio ?? '9:16';
 
   useEffect(() => {
     let ativo = true;
@@ -46,15 +56,26 @@ export function useImagemCampanhaIA(campanha: MockCampanhaConteudo, diagnostico:
     setCarregando(true);
     setErro(null);
 
-    GERAR_IMAGEM_IMAGEN3(promptAplicado).then(imgBase64 => {
+    GERAR_IMAGEM_IMAGEN3(promptAplicado, aspectRatio).then(async imgBase64 => {
       if (!ativo) return;
-      if (imgBase64) {
-        setImagemUrl(imgBase64);
-      } else {
+      if (!imgBase64) {
         setImagemUrl('');
         setErro('A IA não retornou uma imagem. Tente gerar novamente.');
+        setCarregando(false);
+        return;
       }
-      setCarregando(false);
+      // Preview breve com data URL; em seguida hospeda e troca por HTTPS (nunca persistir data: nos cards).
+      setImagemUrl(imgBase64);
+      try {
+        const urlHttps = await HOSPEDAR_MIDIA_DATA_URL(imgBase64);
+        if (!ativo) return;
+        setImagemUrl(urlHttps);
+      } catch (e) {
+        if (!ativo) return;
+        const msg = e instanceof Error ? e.message : 'Falha ao hospedar a imagem em HTTPS.';
+        setErro(msg + ' A prévia ficou só na memória; gere novamente antes de publicar ou adicionar ao Kanban.');
+      }
+      if (ativo) setCarregando(false);
     });
 
     return () => {
