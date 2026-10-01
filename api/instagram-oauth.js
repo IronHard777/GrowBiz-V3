@@ -35,6 +35,7 @@ export default async function handler(req, res) {
       [
         'instagram_basic',
         'instagram_content_publish',
+        'instagram_manage_insights',
         'pages_show_list',
         'pages_read_engagement',
         'business_management'
