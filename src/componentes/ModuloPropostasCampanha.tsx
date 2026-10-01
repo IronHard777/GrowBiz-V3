@@ -2,7 +2,37 @@ import React, { useEffect, useState } from 'react';
 import { DiagnosticoCompleto, MockCampanhaConteudo, PropostaCampanha } from '../tipos';
 import { GERAR_PROPOSTAS_CAMPANHA_GEMINI, TEM_CHAVE_GEMINI_CONFIGURADA } from '../servicos/servicoGemini';
 import { GERAR_PROPOSTAS_CAMPANHA_FALLBACK } from '../servicos/servicoIA';
-import { Compass, Loader2, CheckCircle2, Sparkles } from 'lucide-react';
+import { Compass, Loader2, CheckCircle2, Sparkles, RefreshCw } from 'lucide-react';
+
+const CHAVE_PROPOSTAS_PREFIXO = 'growbiz:propostas-campanha:';
+
+function obterChavePropostas(diagnosticoId: string, campanhaId: string): string {
+  return `${CHAVE_PROPOSTAS_PREFIXO}${diagnosticoId}:${campanhaId}`;
+}
+
+function lerPropostasPersistidas(chave: string): PropostaCampanha[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const bruto = window.localStorage.getItem(chave);
+    if (!bruto) return [];
+    const valor: unknown = JSON.parse(bruto);
+    if (!Array.isArray(valor)) return [];
+    return valor.filter((item): item is PropostaCampanha => (
+      !!item && typeof item === 'object' && typeof (item as PropostaCampanha).id === 'string'
+    ));
+  } catch {
+    return [];
+  }
+}
+
+function salvarPropostasPersistidas(chave: string, propostas: PropostaCampanha[]): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(chave, JSON.stringify(propostas));
+  } catch {
+    // A sessao continua funcionando mesmo se o armazenamento estiver indisponivel.
+  }
+}
 
 interface PropriedadesPropostas {
   diagnostico: DiagnosticoCompleto;
@@ -13,28 +43,52 @@ interface PropriedadesPropostas {
 }
 
 export const ModuloPropostasCampanha: React.FC<PropriedadesPropostas> = ({ diagnostico, campanha, aoAdicionarAoKanban, aoAbrirProposta, idsJaAdicionados }) => {
-  const [propostas, setPropostas] = useState<PropostaCampanha[]>([]);
-  const [carregando, setCarregando] = useState<boolean>(true);
+  const chavePersistencia = obterChavePropostas(diagnostico.id, campanha.id);
+  const [propostas, setPropostas] = useState<PropostaCampanha[]>(() => lerPropostasPersistidas(chavePersistencia));
+  const [carregando, setCarregando] = useState<boolean>(() => lerPropostasPersistidas(chavePersistencia).length === 0);
+  const [nonceGeracao, setNonceGeracao] = useState(0);
 
   useEffect(() => {
     let ativo = true;
+    const persistidas = lerPropostasPersistidas(chavePersistencia);
+
+    if (persistidas.length > 0) {
+      setPropostas(persistidas);
+      setCarregando(false);
+      return () => { ativo = false; };
+    }
+
+    setPropostas([]);
     setCarregando(true);
 
     const carregar = async () => {
+      let geradas: PropostaCampanha[] | null = null;
       if (TEM_CHAVE_GEMINI_CONFIGURADA()) {
-        const geradas = await GERAR_PROPOSTAS_CAMPANHA_GEMINI(diagnostico, campanha);
-        if (!ativo) return;
-        setPropostas(geradas || GERAR_PROPOSTAS_CAMPANHA_FALLBACK(diagnostico));
-      } else {
-        setPropostas(GERAR_PROPOSTAS_CAMPANHA_FALLBACK(diagnostico));
+        geradas = await GERAR_PROPOSTAS_CAMPANHA_GEMINI(diagnostico, campanha);
       }
-      if (ativo) setCarregando(false);
+      if (!ativo) return;
+
+      const resultado = geradas && geradas.length > 0
+        ? geradas
+        : GERAR_PROPOSTAS_CAMPANHA_FALLBACK(diagnostico);
+      salvarPropostasPersistidas(chavePersistencia, resultado);
+      setPropostas(resultado);
+      setCarregando(false);
     };
 
     carregar();
     return () => { ativo = false; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [diagnostico.id]);
+    // The key changes only when the diagnosis/campaign context changes; nonce changes only on Regenerar.
+  }, [chavePersistencia, nonceGeracao]);
+
+  const regenerar = () => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.removeItem(chavePersistencia);
+    }
+    setPropostas([]);
+    setCarregando(true);
+    setNonceGeracao((valor) => valor + 1);
+  };
 
   return (
     <div className="gb-panel p-6 sm:p-8 text-white">
@@ -42,7 +96,18 @@ export const ModuloPropostasCampanha: React.FC<PropriedadesPropostas> = ({ diagn
         <Compass className="w-4 h-4 text-blue-400" />
         <span className="text-[10px] font-mono uppercase tracking-widest text-slate-400">Com base no seu perfil</span>
       </div>
-      <h2 className="text-lg sm:text-xl font-bold mb-6">3 campanhas sugeridas para {diagnostico.nomeNegocio}</h2>
+      <div className="flex items-center justify-between gap-3 mb-6">
+        <h2 className="text-lg sm:text-xl font-bold">3 campanhas sugeridas para {diagnostico.nomeNegocio}</h2>
+        <button
+          type="button"
+          onClick={regenerar}
+          disabled={carregando || propostas.length === 0}
+          className="gb-btn-ghost flex items-center gap-2 shrink-0"
+        >
+          <RefreshCw className="w-3.5 h-3.5" />
+          <span>Regenerar</span>
+        </button>
+      </div>
 
       {carregando ? (
         <div className="flex flex-col items-center justify-center py-16 gap-3">

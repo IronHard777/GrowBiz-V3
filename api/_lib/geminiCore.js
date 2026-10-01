@@ -73,7 +73,7 @@ REGRAS RÍGIDAS DE GERAÇÃO:
 1. O Roteiro de vídeo deve conter 4 cenas contínuas, sem segundo vazio entre elas (0-4s Gancho, 4-8s Dor, 8-16s Solução, 16-22s CTA).
 2. As falas ("falaAudio") DEVEM SER TOTALMENTE ESPECÍFICAS para o negócio "${diagnostico.nomeNegocio}" do setor "${diagnostico.setor}". NUNCA use modelos prontos ou genéricos!
 3. Na última cena (CTA), escreva "Zap" ou "Whats" em vez de "WhatsApp" para que a pronúncia de áudio nativa soe perfeita em português.
-4. O campo "promptImagem" DEVE ser em INGLÊS comercial focado no produto OU serviço real do setor "${diagnostico.setor}".
+4. O campo "promptImagem" DEVE ser em INGLÊS comercial focado no produto OU serviço real do setor "${diagnostico.setor}" e DEVE descrever um fundo visual limpo, sem texto incorporado. NUNCA peça ou gere título, CTA, legenda, banner com palavras, logotipo como texto, marca d'água ou qualquer outra escrita na imagem; o aplicativo adiciona o título e a CTA como overlay depois.
 5. ${REGRA_TOM_E_VOZ}${anexos && anexos.length > 0 ? `
 6. Você recebeu ${anexos.length} arquivo(s) real(is) anexado(s) pelo cliente (catálogo, cardápio ou fotos do produto/local). ANALISE o conteúdo desses arquivos e use detalhes CONCRETOS observados neles (produtos específicos, preços, nomes, estilo visual, ambiente real) na copy, nas hashtags e principalmente no campo "promptImagem" — em vez de generalizações sobre o setor "${diagnostico.setor}". Priorize sempre o que você vê nos arquivos reais sobre suposições genéricas do setor.` : ''}
 
@@ -86,7 +86,7 @@ Retorne um JSON válido com o seguinte formato exato (sem marcadores de código 
   },
   "copy": "Texto persuasivo em português brasileiro com emojis e CTA claro",
   "hashtags": ["#Tag1", "#Tag2", "#Tag3", "#Tag4", "#Tag5"],
-  "promptImagem": "Professional commercial product photography of ${diagnostico.setor}, studio lighting, 8k resolution",
+  "promptImagem": "Professional commercial product photography of ${diagnostico.setor}, studio lighting, 8k resolution, clean text-free background, no typography, no readable writing, no logos, no watermarks, no captions, no banners",
   "roteiroVideo": [
     {
       "segundoInicio": 0,
@@ -164,14 +164,15 @@ Retorne um JSON válido com o seguinte formato exato (sem marcadores de código 
   }
 }
 
-export async function gerarImagemImagen3(prompt) {
+export async function gerarImagemImagen3(prompt, aspectRatio = '9:16') {
   const ai = clienteAi();
   if (!ai) return null;
+  const ratioPermitido = ['1:1', '4:5', '16:9', '9:16'].includes(aspectRatio) ? aspectRatio : '9:16';
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
       contents: prompt,
-      config: { imageConfig: { aspectRatio: '9:16' }, httpOptions: { timeout: 90000 } }
+      config: { imageConfig: { aspectRatio: ratioPermitido }, httpOptions: { timeout: 90000 } }
     });
     const partes = response.candidates?.[0]?.content?.parts || [];
     const parteImagem = partes.find((p) => p.inlineData?.data);
@@ -420,7 +421,7 @@ export async function despacharAcao(action, body) {
     case 'copy':
       return gerarCopyPersuasiva(body.diagnostico, body.objetivo, body.anexos);
     case 'imagem':
-      return { imagem: await gerarImagemImagen3(body.prompt) };
+      return { imagem: await gerarImagemImagen3(body.prompt, body.aspectRatio) };
     case 'sensoriamento':
       return gerarSensoriamentoMercado(body.setor, body.nomeNegocio, body.escopo, body.contexto);
     case 'roteiro':
