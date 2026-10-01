@@ -12,7 +12,7 @@ import {
   VALOR_OPCAO_OUTROS
 } from '../servicos/servicoDiagnostico';
 import { Brain, Sparkles, CheckCircle2, ChevronRight, ArrowRight } from 'lucide-react';
-import { IdTierPlano, OBTER_TIER } from '../tipos/tierPlano';
+import { IdTierPlano, OBTER_TIER, E_PROFUNDIDADE_ENXUTO } from '../tipos/tierPlano';
 
 interface PropriedadesDiagnostico {
   usuario: PerfilUsuario;
@@ -37,7 +37,7 @@ function rotuloQuadrante(categoria: CategoriaModeloNegocio): string {
 
 export const ModuloDiagnostico: React.FC<PropriedadesDiagnostico> = ({ usuario, tier, aoConcluirDiagnostico, aoTrocarTier }) => {
   const infoTier = OBTER_TIER(tier);
-  const eEnxuto = tier.startsWith('enxuto_');
+  const eEnxuto = E_PROFUNDIDADE_ENXUTO(tier);
   const rotuloMidia = [
     infoTier.incluiImagem ? 'imagens' : null,
     infoTier.incluiVideo ? 'videos' : null
@@ -168,13 +168,24 @@ export const ModuloDiagnostico: React.FC<PropriedadesDiagnostico> = ({ usuario, 
             )}
           </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-              Investigação Estratégica & Sensoriamento
+              {eEnxuto
+                ? 'Filtro rápido para campanha leve'
+                : 'Investigação Estratégica & Sensoriamento'}
             </h1>
             <p className="text-xs sm:text-sm text-slate-400 mt-2 max-w-2xl leading-relaxed">
               {eEnxuto
-                ? <>Mapeie o negocio no <strong className="text-slate-200 font-mono">Filtro de 7 Perguntas</strong> para gerar campanha leve com presets de midia ({rotuloMidia}).</>
-                : <>Mapeie o negocio no <strong className="text-slate-200 font-mono">Filtro de 7 Perguntas</strong> (unica ou multipla escolha + Outros) e posicione o modelo nos eixos ciclo de venda × escala.</>}
+                ? <>Responda o <strong className="text-slate-200 font-mono">Filtro de 7 Perguntas</strong> para montar uma campanha ágil com presets de mídia ({rotuloMidia}). Sem pacote estratégico completo — foque em gerar e publicar.</>
+                : <>Mapeie o negócio no <strong className="text-slate-200 font-mono">Filtro de 7 Perguntas</strong> (única ou múltipla escolha + Outros), posicione o modelo nos eixos ciclo de venda × escala e prepare o plano de ataque completo.</>}
             </p>
+            {eEnxuto ? (
+              <p className="text-[11px] text-amber-200/80 mt-2 font-mono max-w-2xl">
+                Depois do filtro: Mocks → Propostas → Kanban. Estratégia Tripla e Performance ficam no plano Completo.
+              </p>
+            ) : (
+              <p className="text-[11px] text-emerald-300/80 mt-2 font-mono max-w-2xl">
+                Depois do filtro: Estratégia Tripla, mocks, propostas, Kanban e painel de performance.
+              </p>
+            )}
           </div>
 
           
@@ -381,7 +392,7 @@ export const ModuloDiagnostico: React.FC<PropriedadesDiagnostico> = ({ usuario, 
         
         <div data-gb-resumo-pos-filtro className="bg-slate-800/90 border border-slate-700 p-4 rounded-xl text-left">
             <span className="text-[10px] text-slate-400 uppercase font-mono tracking-widest font-bold block mb-1">
-              Resumo da matriz (após as 7 perguntas):
+              {eEnxuto ? 'Classificação rápida (após as 7 perguntas):' : 'Resumo da matriz (após as 7 perguntas):'}
             </span>
             <div className="flex items-center gap-2 flex-wrap">
               <span className={`text-xs font-bold font-mono px-2.5 py-1 rounded ${
@@ -411,7 +422,11 @@ export const ModuloDiagnostico: React.FC<PropriedadesDiagnostico> = ({ usuario, 
             className="w-full sm:w-auto min-w-[320px] bg-blue-500 hover:bg-blue-400 disabled:opacity-60 text-white font-extrabold py-4 px-8 rounded-xl text-xs uppercase tracking-widest shadow-xl shadow-blue-500/20 transition-all flex items-center justify-center space-x-3 scale-100 hover:scale-[1.02]"
           >
             <Sparkles className="w-5 h-5 text-white" />
-            <span>{enviando ? 'Classificando respostas Outros…' : 'Gerar Mocks e Consultoria com IA'}</span>
+            <span>{enviando
+              ? 'Classificando respostas Outros…'
+              : eEnxuto
+                ? 'Gerar campanha leve com IA'
+                : 'Gerar plano de ataque e consultoria com IA'}</span>
             <ArrowRight className="w-5 h-5 text-white" />
           </button>
         </div>

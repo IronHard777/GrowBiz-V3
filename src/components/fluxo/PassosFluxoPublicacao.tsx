@@ -109,18 +109,26 @@ export function PASSO_ESTA_COMPLETO(passo: PassoFluxoId, estado: EstadoFluxoPubl
 interface PropriedadesPassosFluxo {
   estado: EstadoFluxoPublicacao;
   aoIrParaPasso: (passo: PassoFluxoId) => void;
+  /** Enxuto: destaque visual no happy-path. Completo: layout padrão. */
+  enfatizado?: boolean;
 }
 
 export const PassosFluxoPublicacao: React.FC<PropriedadesPassosFluxo> = ({
   estado,
-  aoIrParaPasso
+  aoIrParaPasso,
+  enfatizado = false
 }) => {
   const passoAtual = DERIVAR_PASSO_ATUAL(estado);
   const ajudaAtual = PASSOS.find((p) => p.id === passoAtual)?.ajuda ?? '';
 
   return (
     <div
-      className="sticky top-16 z-40 -mx-4 px-4 py-3 sm:mx-0 sm:px-0 backdrop-blur-md bg-[#0b0f1a]/90 border-b border-white/10 sm:border sm:border-white/10 sm:rounded-2xl sm:bg-[rgba(255,255,255,0.03)]"
+      className={[
+        'sticky top-16 z-40 -mx-4 px-4 py-3 sm:mx-0 sm:px-0 backdrop-blur-md border-b sm:border sm:rounded-2xl',
+        enfatizado
+          ? 'bg-[#12100a]/95 border-amber-500/40 sm:border-amber-500/40 sm:bg-[rgba(245,158,11,0.06)]'
+          : 'bg-[#0b0f1a]/90 border-white/10 sm:border-white/10 sm:bg-[rgba(255,255,255,0.03)]'
+      ].join(' ')}
       role="navigation"
       aria-label="Fluxo de publicação"
     >
@@ -187,8 +195,8 @@ export const PassosFluxoPublicacao: React.FC<PropriedadesPassosFluxo> = ({
         </ol>
       </div>
       <p className="mt-2 text-[11px] sm:text-xs text-slate-400 font-mono leading-relaxed px-0.5">
-        <span className="text-blue-400 font-bold uppercase tracking-wider mr-1.5">
-          Passo {passoAtual}/{PASSOS.length}
+        <span className={`${enfatizado ? 'text-amber-300' : 'text-blue-400'} font-bold uppercase tracking-wider mr-1.5`}>
+          {enfatizado ? 'Fluxo feliz' : 'Passo'} {passoAtual}/{PASSOS.length}
         </span>
         {ajudaAtual}
       </p>
