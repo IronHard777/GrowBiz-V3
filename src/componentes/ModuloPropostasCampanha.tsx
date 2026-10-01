@@ -37,12 +37,42 @@ function salvarPropostasPersistidas(chave: string, propostas: PropostaCampanha[]
 interface PropriedadesPropostas {
   diagnostico: DiagnosticoCompleto;
   campanha: MockCampanhaConteudo;
-  aoAdicionarAoKanban: (proposta: PropostaCampanha) => void;
+  aoAdicionarAoKanban: (proposta: PropostaCampanha) => void | Promise<void>;
   aoAbrirProposta: (proposta: PropostaCampanha) => void;
   idsJaAdicionados: string[];
+  /** Desabilita Adicionar enquanto hospeda ou sem HTTPS util. */
+  adicionarDesabilitado?: boolean;
+  mensagemBloqueioAdicionar?: string | null;
+  feedbackAdicionar?: string | null;
+  /** Remapeia Instagram Reels → Feed (tiers/fluxo so-imagem). */
+  preferirFeedParaImagem?: boolean;
 }
 
-export const ModuloPropostasCampanha: React.FC<PropriedadesPropostas> = ({ diagnostico, campanha, aoAdicionarAoKanban, aoAbrirProposta, idsJaAdicionados }) => {
+function normalizarPropostasParaImagem(lista: PropostaCampanha[]): PropostaCampanha[] {
+  return lista.map((p) => {
+    if (p.plataforma !== 'Instagram Reels') return p;
+    return {
+      ...p,
+      plataforma: 'Instagram Feed',
+      titulo: (p.titulo || '').replace(/Reels/gi, 'Feed'),
+      descricao: (p.descricao || '').replace(/Reels/gi, 'Feed'),
+      copy: typeof p.copy === 'string' ? p.copy.replace(/Reels/gi, 'post') : p.copy,
+      hashtags: p.hashtags?.map((h) => h.replace(/Reels/gi, 'Feed'))
+    };
+  });
+}
+
+export const ModuloPropostasCampanha: React.FC<PropriedadesPropostas> = ({
+  diagnostico,
+  campanha,
+  aoAdicionarAoKanban,
+  aoAbrirProposta,
+  idsJaAdicionados,
+  adicionarDesabilitado = false,
+  mensagemBloqueioAdicionar = null,
+  feedbackAdicionar = null,
+  preferirFeedParaImagem = false
+}) => {
   const chavePersistencia = obterChavePropostas(diagnostico.id, campanha.id);
   const [propostas, setPropostas] = useState<PropostaCampanha[]>(() => lerPropostasPersistidas(chavePersistencia));
   const [carregando, setCarregando] = useState<boolean>(() => lerPropostasPersistidas(chavePersistencia).length === 0);
@@ -53,7 +83,10 @@ export const ModuloPropostasCampanha: React.FC<PropriedadesPropostas> = ({ diagn
     const persistidas = lerPropostasPersistidas(chavePersistencia);
 
     if (persistidas.length > 0) {
-      setPropostas(persistidas);
+      const ajustadas = preferirFeedParaImagem
+        ? normalizarPropostasParaImagem(persistidas)
+        : persistidas;
+      setPropostas(ajustadas);
       setCarregando(false);
       return () => { ativo = false; };
     }
@@ -68,9 +101,12 @@ export const ModuloPropostasCampanha: React.FC<PropriedadesPropostas> = ({ diagn
       }
       if (!ativo) return;
 
-      const resultado = geradas && geradas.length > 0
+      const brutas = geradas && geradas.length > 0
         ? geradas
         : GERAR_PROPOSTAS_CAMPANHA_FALLBACK(diagnostico);
+      const resultado = preferirFeedParaImagem
+        ? normalizarPropostasParaImagem(brutas)
+        : brutas;
       salvarPropostasPersistidas(chavePersistencia, resultado);
       setPropostas(resultado);
       setCarregando(false);
@@ -79,7 +115,7 @@ export const ModuloPropostasCampanha: React.FC<PropriedadesPropostas> = ({ diagn
     carregar();
     return () => { ativo = false; };
     // The key changes only when the diagnosis/campaign context changes; nonce changes only on Regenerar.
-  }, [chavePersistencia, nonceGeracao]);
+  }, [chavePersistencia, nonceGeracao, preferirFeedParaImagem]);
 
   const regenerar = () => {
     if (typeof window !== 'undefined') {
@@ -136,17 +172,32 @@ export const ModuloPropostasCampanha: React.FC<PropriedadesPropostas> = ({ diagn
                     <span>Abrir</span>
                   </button>
                   <button
-                  onClick={() => aoAdicionarAoKanban(proposta)}
-                  disabled={jaAdicionada}
+                  type="button"
+                  onClick={() => void aoAdicionarAoKanban(proposta)}
+                  disabled={jaAdicionada || adicionarDesabilitado}
+                  title={
+                    jaAdicionada
+                      ? undefined
+                      : adicionarDesabilitado
+                        ? (mensagemBloqueioAdicionar || 'Aguarde HTTPS da midia')
+                        : undefined
+                  }
                   className={jaAdicionada ? 'gb-btn-ghost w-full flex items-center justify-center gap-2' : 'gb-btn w-full flex items-center justify-center gap-2'}
                 >
                   {jaAdicionada ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Sparkles className="w-3.5 h-3.5" />}
-                  <span>{jaAdicionada ? 'Adicionada ao Kanban' : 'Adicionar ao Kanban'}</span>
+                  <span>{jaAdicionada ? 'Adicionada ao Kanban' : (adicionarDesabilitado ? 'Aguardando midia HTTPS...' : 'Adicionar ao Kanban')}</span>
                 </button>
               </div>
             );
           })}
         </div>
+      )}
+
+      {!carregando && adicionarDesabilitado && mensagemBloqueioAdicionar && (
+        <p role="status" className="mt-4 text-xs text-amber-300">{mensagemBloqueioAdicionar}</p>
+      )}
+      {feedbackAdicionar && (
+        <p role="status" className="mt-4 text-xs text-amber-300">{feedbackAdicionar}</p>
       )}
     </div>
   );

@@ -113,24 +113,45 @@ export const CalendarioConteudo: React.FC<PropriedadesCalendario> = ({ diagnosti
 
   
   // Sincroniza midia HTTPS dos Mocks nos cards (nunca grava data: base64; nao sobrescreve HTTPS manual).
+  // Imagem != Reels: se mock e imagem, rebaixa Reels->Feed (exceto card com video HTTPS proprio).
   useEffect(() => {
     const mock = (midiaMockUrl || '').trim();
     if (!mock) return;
     if (/^data:/i.test(mock)) return;
     if (!/^https:\/\//i.test(mock)) return;
     if (/unsplash|picsum|placehold/i.test(mock)) return;
+    const mockEhImagem =
+      /^data:image\//i.test(mock) ||
+      (!/\.(mp4|mov|m4v|webm)(\?|$)/i.test(mock) && !/^data:video\//i.test(mock));
     const lista = OBTER_EVENTOS_CALENDARIO().filter((e) => e.diagnosticoId === diagnosticoId);
     let mudou = false;
     for (const evt of lista) {
-      // Reels precisa de video - nao sincronizar imagem HTTPS dos Mocks
-      if (evt.canal === 'Instagram Reels') continue;
       const atual = (evt.imagemUrl || '').trim();
-      if (atual === mock) continue;
-      // Atualiza se ausente, estoque, ou data: residual
       const precisaTrocar =
         !atual ||
         /^data:/i.test(atual) ||
         /unsplash|picsum|placehold/i.test(atual);
+      const atualEhVideoHttps =
+        !!atual &&
+        /^https:\/\//i.test(atual) &&
+        /\.(mp4|mov|m4v|webm)(\?|$)/i.test(atual);
+
+      if (evt.canal === 'Instagram Reels') {
+        if (!mockEhImagem || atualEhVideoHttps) continue;
+        const proximaUrl =
+          precisaTrocar || !(atual && /^https:\/\//i.test(atual) && !/unsplash|picsum|placehold/i.test(atual))
+            ? mock
+            : atual;
+        ATUALIZAR_EVENTO_CALENDARIO({
+          ...evt,
+          canal: 'Instagram Feed',
+          imagemUrl: proximaUrl
+        });
+        mudou = true;
+        continue;
+      }
+
+      if (atual === mock) continue;
       if (!precisaTrocar) continue;
       ATUALIZAR_EVENTO_CALENDARIO({ ...evt, imagemUrl: mock });
       mudou = true;

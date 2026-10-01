@@ -100,7 +100,8 @@ export function SALVAR_RESULTADO_CONSULTORIA_PERSISTENCIA(resultado: ResultadoCo
       diagnosticoId: resultado.diagnostico.id,
       titulo: resultado.campanhaMock.tituloCampanha,
       dataHorario: new Date(Date.now() + 86400000).toISOString(), // Amanhã, com fuso preservado
-      canal: (resultado.campanhaMock.canalIdeal.includes('Reels') ? 'Instagram Reels' : 'Instagram Feed') as any,
+      // Auto sem midia: Reels exige video; happy path imagem usa Feed
+      canal: 'Instagram Feed' as any,
       status: 'rascunho',
       copy: resultado.campanhaMock.copyPersuasiva,
       imagemUrl: undefined, // sem mock/estoque — usuario anexa midia real antes de publicar

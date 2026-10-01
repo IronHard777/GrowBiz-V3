@@ -43,7 +43,11 @@ export const ConteudoAbasResultados: React.FC<Props> = ({ abaAtiva, logica }) =>
     aplicarPivotagem,
     aoSelecionarEstiloVideo,
     aoAbrirProposta,
-    aoAdicionarPropostaAoKanban
+    aoAdicionarPropostaAoKanban,
+    adicionandoBloqueado,
+    mensagemBloqueioKanban,
+    feedbackKanban,
+    preferirFeedParaImagem
   } = logica;
 
   if (abaAtiva === 'modulo3') {
@@ -111,6 +115,10 @@ export const ConteudoAbasResultados: React.FC<Props> = ({ abaAtiva, logica }) =>
         aoAdicionarAoKanban={aoAdicionarPropostaAoKanban}
         aoAbrirProposta={aoAbrirProposta}
         idsJaAdicionados={propostasAdicionadasIds}
+        adicionarDesabilitado={adicionandoBloqueado}
+        mensagemBloqueioAdicionar={mensagemBloqueioKanban}
+        feedbackAdicionar={feedbackKanban}
+        preferirFeedParaImagem={preferirFeedParaImagem}
       />
     );
   }

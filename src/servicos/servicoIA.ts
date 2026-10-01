@@ -162,14 +162,14 @@ export function GERAR_PROPOSTAS_CAMPANHA_FALLBACK(diagnostico: DiagnosticoComple
   return [
     {
       id: `prop_${Date.now()}_0`,
-      plataforma: 'Instagram Reels',
-      titulo: `${nome}: prova social em Reels`,
+      plataforma: 'Instagram Feed',
+      titulo: `${nome}: prova social no Feed`,
       descricao: `Depoimentos e antes/depois de clientes de ${setor}${local}, com foco em conversão.`,
       aderenciaPercentual: 92,
       copy: `Você ainda está em dúvida sobre ${setor}?
 
-No ${nome}${local}, quem já passou por aqui conta o resultado de verdade.\n\n👉 Salva este Reels e chama no WhatsApp para garantir seu horário.`,
-      hashtags: ['#GrowBiz', `#${setor.replace(/\s+/g, '')}`, '#ProvaSocial', '#Reels'],
+No ${nome}${local}, quem já passou por aqui conta o resultado de verdade.\n\n👉 Salva este post e chama no WhatsApp para garantir seu horário.`,
+      hashtags: ['#GrowBiz', `#${setor.replace(/\s+/g, '')}`, '#ProvaSocial', '#Feed'],
       chamadaParaAcao: 'Chamar no WhatsApp agora'
     },
     {

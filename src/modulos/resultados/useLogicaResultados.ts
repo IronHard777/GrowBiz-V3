@@ -18,7 +18,7 @@ import {
   type PassoFluxoId,
   type EstadoFluxoPublicacao
 } from '../../components/fluxo/PassosFluxoPublicacao';
-import { OBTER_SESSAO_INSTAGRAM, CANAL_INSTAGRAM } from '../../servicos/servicoInstagram';
+import { OBTER_SESSAO_INSTAGRAM, CANAL_INSTAGRAM, HOSPEDAR_MIDIA_DATA_URL } from '../../servicos/servicoInstagram';
 
 /** HTTPS real (nao estoque) — alinhado ao criterio do Kanban/Instagram. */
 export function URL_HTTPS_MIDIA_UTIL(url?: string | null): boolean {
@@ -27,6 +27,19 @@ export function URL_HTTPS_MIDIA_UTIL(url?: string | null): boolean {
   if (/unsplash|picsum|placehold/i.test(u)) return false;
   return true;
 }
+
+
+/** True se a URL parece imagem (data:image ou HTTPS sem extensao de video). */
+export function MIDIA_EH_IMAGEM(url?: string | null): boolean {
+  const u = (url || '').trim();
+  if (!u) return false;
+  if (/^data:image\//i.test(u)) return true;
+  if (/^data:video\//i.test(u)) return false;
+  if (/\.(mp4|mov|m4v|webm)(\?|$)/i.test(u)) return false;
+  if (/^https:\/\//i.test(u)) return true;
+  return false;
+}
+
 
 export type PropriedadesLogicaResultados = {
   resultado: ResultadoCompletoConsultoria;
@@ -56,6 +69,8 @@ export function useLogicaResultados({ resultado, tier }: PropriedadesLogicaResul
   });
   const [propostasAdicionadasIds, setPropostasAdicionadasIds] = useState<string[]>([]);
   const [sinalDeAtualizacaoKanban, setSinalDeAtualizacaoKanban] = useState<number>(0);
+  const [feedbackKanban, setFeedbackKanban] = useState<string | null>(null);
+  const [hospedandoParaKanban, setHospedandoParaKanban] = useState<boolean>(false);
 
   const { diagnostico, estrategias, kpisSimulados, alertaPivotagem } = resultado;
 
@@ -76,7 +91,8 @@ export function useLogicaResultados({ resultado, tier }: PropriedadesLogicaResul
 
   const imagemCampanha = useImagemCampanhaIA(campanhaAtual, diagnostico, mediaPreset);
 
-  // Sincroniza URL HTTPS nos cards mesmo sem a aba Kanban montada
+  // Sincroniza URL HTTPS nos cards mesmo sem a aba Kanban montada.
+  // Imagem != Reels: se mock e imagem, rebaixa Reels->Feed (exceto card com video HTTPS proprio).
   useEffect(() => {
     const url = (imagemCampanha.imagemUrl || '').trim();
     if (!url || !/^https:\/\//i.test(url)) return;
@@ -84,13 +100,29 @@ export function useLogicaResultados({ resultado, tier }: PropriedadesLogicaResul
     const lista = OBTER_EVENTOS_CALENDARIO().filter((e) => e.diagnosticoId === diagnostico.id);
     let mudou = false;
     for (const evt of lista) {
-      if (evt.canal === 'Instagram Reels') continue;
       const atual = (evt.imagemUrl || '').trim();
-      if (atual === url) continue;
       const precisaTrocar =
         !atual ||
         /^data:/i.test(atual) ||
         /unsplash|picsum|placehold/i.test(atual);
+      const atualEhVideoHttps =
+        !!atual &&
+        /^https:\/\//i.test(atual) &&
+        /\.(mp4|mov|m4v|webm)(\?|$)/i.test(atual);
+
+      if (evt.canal === 'Instagram Reels') {
+        if (!MIDIA_EH_IMAGEM(url) || atualEhVideoHttps) continue;
+        const proximaUrl = precisaTrocar || !URL_HTTPS_MIDIA_UTIL(atual) ? url : atual;
+        ATUALIZAR_EVENTO_CALENDARIO({
+          ...evt,
+          canal: 'Instagram Feed',
+          imagemUrl: proximaUrl
+        });
+        mudou = true;
+        continue;
+      }
+
+      if (atual === url) continue;
       if (!precisaTrocar) continue;
       ATUALIZAR_EVENTO_CALENDARIO({ ...evt, imagemUrl: url });
       mudou = true;
@@ -159,23 +191,65 @@ export function useLogicaResultados({ resultado, tier }: PropriedadesLogicaResul
     setAbaAtiva('modulo3');
   };
 
-  const aoAdicionarPropostaAoKanban = (proposta: PropostaCampanha) => {
-    const midia = (imagemCampanha.imagemUrl || '').trim();
-    const midiaOk = Boolean(
-      midia &&
-      /^https:\/\//i.test(midia) &&
-      !/unsplash|picsum|placehold/i.test(midia)
-    );
+  const midiaHttpsPronta = URL_HTTPS_MIDIA_UTIL(imagemCampanha.imagemUrl);
+  const midiaSoData = /^data:/i.test((imagemCampanha.imagemUrl || '').trim());
+  const adicionandoBloqueado =
+    hospedandoParaKanban ||
+    imagemCampanha.carregando ||
+    !midiaHttpsPronta;
+  const mensagemBloqueioKanban = hospedandoParaKanban
+    ? 'Hospedando mídia em HTTPS… aguarde para adicionar ao Kanban.'
+    : imagemCampanha.carregando
+      ? 'Gerando/hospedando mídia… aguarde para adicionar ao Kanban.'
+      : midiaSoData
+        ? 'A prévia ainda é data: (sem HTTPS). Aguarde a hospedagem ou gere novamente antes de adicionar ao Kanban.'
+        : !midiaHttpsPronta
+          ? 'Gere uma mídia com URL HTTPS útil nos Mocks antes de adicionar ao Kanban.'
+          : null;
+
+  const aoAdicionarPropostaAoKanban = async (proposta: PropostaCampanha) => {
+    setFeedbackKanban(null);
+    let midia = (imagemCampanha.imagemUrl || '').trim();
+
+    if (/^data:/i.test(midia)) {
+      setHospedandoParaKanban(true);
+      try {
+        midia = await HOSPEDAR_MIDIA_DATA_URL(midia);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : 'Falha ao hospedar a mídia em HTTPS.';
+        setFeedbackKanban(msg + ' Card não foi criado — gere novamente ou aguarde HTTPS antes de adicionar.');
+        setHospedandoParaKanban(false);
+        return;
+      }
+      setHospedandoParaKanban(false);
+    }
+
+    const midiaOk = URL_HTTPS_MIDIA_UTIL(midia);
+    if (!midiaOk) {
+      setFeedbackKanban(
+        midiaSoData || /^data:/i.test(midia)
+          ? 'Só há prévia data: sem HTTPS. Card não foi criado.'
+          : 'Sem URL HTTPS útil de mídia. Card não foi criado.'
+      );
+      return;
+    }
+
+    let canal = proposta.plataforma as CanalPublicacao;
+    // Imagem ≠ Reels (Meta precisa video): rebaixa para Feed
+    if (canal === 'Instagram Reels' && (MIDIA_EH_IMAGEM(midia) || !infoTier.incluiVideo || mediaPreset.type === 'image')) {
+      canal = 'Instagram Feed';
+    }
+
     CRIAR_EVENTO_CALENDARIO({
       id: `evt_${proposta.id}`,
       diagnosticoId: diagnostico.id,
       titulo: proposta.titulo,
       dataHorario: new Date(Date.now() + 86400000).toISOString(),
-      canal: proposta.plataforma as CanalPublicacao,
+      canal,
       status: 'rascunho',
       copy: proposta.copy || proposta.descricao,
       hashtags: proposta.hashtags?.length ? proposta.hashtags : campanhaAtual.hashtagsEstrategicas,
-      imagemUrl: midiaOk ? midia : undefined,
+      imagemUrl: midia,
       criadoEm: new Date().toISOString()
     });
     setPropostasAdicionadasIds((prev) => [...prev, proposta.id]);
@@ -261,6 +335,11 @@ export function useLogicaResultados({ resultado, tier }: PropriedadesLogicaResul
     aoSelecionarEstiloVideo,
     aoAbrirProposta,
     aoAdicionarPropostaAoKanban,
+    adicionandoBloqueado,
+    mensagemBloqueioKanban,
+    feedbackKanban,
+    hospedandoParaKanban,
+    preferirFeedParaImagem: !infoTier.incluiVideo || mediaPreset.type === 'image',
     estadoFluxo,
     aoIrParaPassoFluxo,
     irProximaEtapa,
