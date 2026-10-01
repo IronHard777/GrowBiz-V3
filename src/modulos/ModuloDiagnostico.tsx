@@ -11,6 +11,7 @@ import {
   OBTER_RESPOSTA_PERGUNTA,
   VALOR_OPCAO_OUTROS
 } from '../servicos/servicoDiagnostico';
+import { ANEXAR_CLASSIFICACAO_JEV } from '../servicos/servicoJev';
 import { Brain, Sparkles, CheckCircle2, ChevronRight, ArrowRight } from 'lucide-react';
 import { IdTierPlano, OBTER_TIER, E_PROFUNDIDADE_ENXUTO } from '../tipos/tierPlano';
 
@@ -56,6 +57,7 @@ export const ModuloDiagnostico: React.FC<PropriedadesDiagnostico> = ({ usuario, 
   const [perguntaAtualIdx, setPerguntaAtualIdx] = useState<number>(0);
   const [investigando, setInvestigando] = useState(false);
   const [enviando, setEnviando] = useState(false);
+  const [mensagemEnvio, setMensagemEnvio] = useState('Classificando modelo de negócio…');
   const [erroFiltro, setErroFiltro] = useState<string | null>(null);
 
   const perguntasList = OBTER_SETE_PERGUNTAS_ESTRATEGICAS(setor, nomeNegocio);
@@ -122,14 +124,17 @@ export const ModuloDiagnostico: React.FC<PropriedadesDiagnostico> = ({ usuario, 
 
     setEnviando(true);
     try {
+      setMensagemEnvio('Classificando respostas Outros…');
       const respostasClassificadas = await CLASSIFICAR_RESPOSTAS_OUTROS(respostasFiltro, setor);
-      const diagnosticoFinal = CRIAR_DIAGNOSTICO_COMPLETO(
+      let diagnosticoFinal = CRIAR_DIAGNOSTICO_COMPLETO(
         nomeNegocio,
         setor,
         modeloOperacional,
         escopoGeografico,
         respostasClassificadas
       );
+      setMensagemEnvio('Classificando modelo de negócio…');
+      diagnosticoFinal = await ANEXAR_CLASSIFICACAO_JEV(diagnosticoFinal);
       aoConcluirDiagnostico(diagnosticoFinal);
     } finally {
       setEnviando(false);
@@ -423,7 +428,7 @@ export const ModuloDiagnostico: React.FC<PropriedadesDiagnostico> = ({ usuario, 
           >
             <Sparkles className="w-5 h-5 text-white" />
             <span>{enviando
-              ? 'Classificando respostas Outros…'
+              ? mensagemEnvio
               : eEnxuto
                 ? 'Gerar campanha leve com IA'
                 : 'Gerar plano de ataque e consultoria com IA'}</span>

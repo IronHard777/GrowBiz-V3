@@ -79,6 +79,31 @@ export interface SensoriamentoMercado {
   casosDeSucessoAncorados: string[];
 }
 
+export interface ClassificacaoJevChoice {
+  type: 'choice';
+  choice: string;
+  probabilities: Record<string, number>;
+  confidence?: number;
+}
+
+export interface ClassificacaoJevScore {
+  type: 'score';
+  score: number;
+  legend: Record<string, string>;
+  probabilities: Record<string, number>;
+  confidence?: number;
+}
+
+/** Overlay tipado via TypeSafe/Jev — não substitui categoriaModelo (matriz local). */
+export interface ClassificacaoJev {
+  model: string;
+  quadrante: ClassificacaoJevChoice;
+  ciclo_venda: ClassificacaoJevScore;
+  escala: ClassificacaoJevScore;
+  usage: { input_tokens: number; output_tokens: number };
+  obtidoEm: string;
+}
+
 export interface DiagnosticoCompleto {
   id: string;
   usuarioId: string;
@@ -92,6 +117,8 @@ export interface DiagnosticoCompleto {
   categoriaModelo: CategoriaModeloNegocio;
   respostasFiltro: RespostasFiltroSetePerguntas;
   sensoriamento: SensoriamentoMercado;
+  /** Overlay Jev (Choice/Score); matriz local permanece em categoriaModelo. */
+  classificacaoJev?: ClassificacaoJev;
   dataCriacao: string;
 }
 
