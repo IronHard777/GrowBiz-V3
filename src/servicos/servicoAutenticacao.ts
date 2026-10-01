@@ -44,3 +44,8 @@ export const CRIAR_USUARIO_DEMO = (): PerfilUsuario => {
   SALVAR_SESSAO_USUARIO(usuarioDemo);
   return usuarioDemo;
 };
+
+/** Detecta sessao criada via CRIAR_USUARIO_DEMO (id usr_demo_*). */
+export const EH_USUARIO_DEMO = (usuario: PerfilUsuario | null | undefined): boolean => {
+  return !!usuario?.id?.startsWith('usr_demo_');
+};

@@ -19,6 +19,7 @@ import {
   TIPO_MIDIA_DO_CANAL,
   SessaoInstagram
 } from '../servicos/servicoInstagram';
+import { OBTER_USUARIO_LOGADO, EH_USUARIO_DEMO } from '../servicos/servicoAutenticacao';
 import {
   LayoutGrid,
   Plus,
@@ -79,6 +80,7 @@ function URL_HTTPS_VALIDA_PARA_PUBLICAR(imagemUrl?: string | null): boolean {
 export const CalendarioConteudo: React.FC<PropriedadesCalendario> = ({ diagnosticoId, sinalDeAtualizacao, midiaMockUrl, aoMudancaEventos }) => {
   const [eventos, setEventos] = useState<EventoCalendarioConteudo[]>([]);
   const [sessaoIg, setSessaoIg] = useState<SessaoInstagram | null>(() => OBTER_SESSAO_INSTAGRAM());
+  const modoDemo = EH_USUARIO_DEMO(OBTER_USUARIO_LOGADO());
   const [metaConfigurado, setMetaConfigurado] = useState<boolean>(false);
   const [publicandoId, setPublicandoId] = useState<string | null>(null);
   const [msgIg, setMsgIg] = useState<string | null>(null);
@@ -260,11 +262,42 @@ useEffect(() => {
     setMsgIg('Conta Instagram desconectada.');
   };
 
+  /** Publish local no modo Demo (sem sessao IG): marca publicado sem Meta Graph. */
+  const publicarSimulacaoDemo = (evt: EventoCalendarioConteudo) => {
+    setMsgIg(null);
+    setErroCardIg(null);
+    const fresco = OBTER_EVENTOS_CALENDARIO().find(e => e.id === evt.id) || evt;
+    if (!CANAL_INSTAGRAM(fresco.canal)) return;
+    if (!URL_HTTPS_VALIDA_PARA_PUBLICAR(fresco.imagemUrl)) {
+      const msg = 'Adicione uma URL HTTPS de midia no card (editar) ou gere midia nos Mocks de Conteudo.';
+      setMsgIg(msg);
+      setErroCardIg({ id: fresco.id, msg });
+      return;
+    }
+    setPublicandoId(fresco.id);
+    try {
+      ATUALIZAR_EVENTO_CALENDARIO({ ...fresco, status: 'publicado' });
+      recarregarEventos();
+      setErroCardIg(null);
+      setMsgIg('Publicacao simulada (Demo) — nada foi enviado ao Instagram/Meta.');
+      aoMudancaEventos?.();
+    } finally {
+      setPublicandoId(null);
+    }
+  };
+
   const publicarNoInstagram = async (evt: EventoCalendarioConteudo) => {
     setMsgIg(null);
     setErroCardIg(null);
     const fresco = OBTER_EVENTOS_CALENDARIO().find(e => e.id === evt.id) || evt;
     if (!CANAL_INSTAGRAM(fresco.canal)) return;
+
+    // Modo Demo sem sessao IG: publish local (sem OAuth/Graph). Com sessao IG real, segue publish Meta.
+    if (modoDemo && !OBTER_SESSAO_INSTAGRAM()) {
+      publicarSimulacaoDemo(fresco);
+      return;
+    }
+
     const mediaType = TIPO_MIDIA_DO_CANAL(fresco.canal);
     const mediaUrl = (fresco.imagemUrl || '').trim();
     const validacao = VALIDAR_MIDIA_PARA_INSTAGRAM(mediaUrl, mediaType, midiaMockUrl);
@@ -451,11 +484,31 @@ useEffect(() => {
                             type="button"
                             onClick={() => publicarNoInstagram(evt)}
                             disabled={publicandoId === evt.id || !URL_HTTPS_VALIDA_PARA_PUBLICAR(evt.imagemUrl)}
-                            title={!URL_HTTPS_VALIDA_PARA_PUBLICAR(evt.imagemUrl) ? 'Adicione uma URL HTTPS de midia no card (editar) ou gere midia nos Mocks de Conteudo.' : undefined}
-                            className="mb-3 w-full flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white text-[11px] font-mono font-bold uppercase tracking-wider disabled:opacity-50"
+                            title={
+                              !URL_HTTPS_VALIDA_PARA_PUBLICAR(evt.imagemUrl)
+                                ? 'Adicione uma URL HTTPS de midia no card (editar) ou gere midia nos Mocks de Conteudo.'
+                                : (sessaoIg
+                                  ? 'Publica de verdade no Instagram via Meta Graph.'
+                                  : modoDemo
+                                    ? 'Simulacao Demo: marca o card como publicado localmente. Nao chama Meta/Instagram.'
+                                    : 'Conecte o Instagram no topo para publicar de verdade via Meta.')
+                            }
+                            className={
+                              sessaoIg || !modoDemo
+                                ? 'mb-3 w-full flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white text-[11px] font-mono font-bold uppercase tracking-wider disabled:opacity-50'
+                                : 'mb-3 w-full flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 border border-amber-500/40 text-amber-100 text-[11px] font-mono font-bold uppercase tracking-wider disabled:opacity-50'
+                            }
                           >
                             <Instagram className="w-3.5 h-3.5" />
-                            <span>{publicandoId === evt.id ? 'Publicando...' : 'Publicar no Instagram'}</span>
+                            <span>
+                              {publicandoId === evt.id
+                                ? (sessaoIg ? 'Publicando...' : modoDemo ? 'Simulando...' : 'Publicando...')
+                                : (sessaoIg
+                                  ? 'Publicar no Instagram'
+                                  : modoDemo
+                                    ? 'Publicar (simulacao Demo)'
+                                    : 'Publicar no Instagram')}
+                            </span>
                           </button>
                           {erroCardIg?.id === evt.id && (
                             <p className="mb-3 text-[11px] font-mono text-amber-300 leading-relaxed">{erroCardIg.msg}</p>
