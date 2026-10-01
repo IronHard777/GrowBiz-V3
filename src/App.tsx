@@ -11,6 +11,7 @@ import { ModuloCarregamentoIA } from './modulos/ModuloCarregamentoIA';
 import { ModuloResultadosMocks } from './modulos/ModuloResultadosMocks';
 import { ModuloEscolhaTier } from './modulos/ModuloEscolhaTier';
 import { IdTierPlano } from './tipos/tierPlano';
+import { EXCLUIR_EVENTOS_DO_DIAGNOSTICO } from './servicos/servicoPersistencia';
 
 type ModuloId = 'autenticacao' | 'diagnostico' | 'carregamento' | 'escolha-tier' | 'resultados';
 
@@ -88,6 +89,10 @@ export default function App() {
   };
 
   const aoReiniciarDiagnostico = () => {
+    // Novo fluxo: limpa cards do diagnóstico atual (evita órfãos no localStorage)
+    if (resultadoConsultoria?.diagnostico?.id) {
+      EXCLUIR_EVENTOS_DO_DIAGNOSTICO(resultadoConsultoria.diagnostico.id);
+    }
     setResultadoConsultoria(null);
     // Mantém o plano: Novo Filtro volta às 7 perguntas; sem tier → escolha-tier
     setModuloAtivo(tierSelecionado ? 'diagnostico' : 'escolha-tier');

@@ -3,7 +3,7 @@ import { MockCampanhaConteudo, ResultadoCompletoConsultoria, PropostaCampanha, C
 import { useImagemCampanhaIA } from '../../hooks/useImagemCampanhaIA';
 import { CategoriaEstilo } from '../../servicos/servicoCategoriasEstilo';
 import { GERAR_ROTEIRO_VIDEO_COM_ESTILO_GEMINI, GERAR_IMAGEM_IMAGEN3 } from '../../servicos/servicoGemini';
-import { CRIAR_EVENTO_CALENDARIO, ATUALIZAR_EVENTO_CALENDARIO, OBTER_EVENTOS_CALENDARIO } from '../../servicos/servicoPersistencia';
+import { CRIAR_EVENTO_CALENDARIO, ATUALIZAR_EVENTO_CALENDARIO, OBTER_EVENTOS_CALENDARIO, OBTER_IDS_PROPOSTAS_NO_KANBAN } from '../../servicos/servicoPersistencia';
 import { appendPresetToPrompt, type PresetSelection } from '../../components/media/MediaPresets';
 import { MONTAR_PROMPT_VISUAL } from '../../servicos/servicoContextoVisual';
 import {
@@ -67,12 +67,21 @@ export function useLogicaResultados({ resultado, tier }: PropriedadesLogicaResul
     ratio: '9:16',
     style: 'realistic'
   });
-  const [propostasAdicionadasIds, setPropostasAdicionadasIds] = useState<string[]>([]);
+  const { diagnostico, estrategias, kpisSimulados, alertaPivotagem } = resultado;
+
+  // Hidrata do localStorage: trocar Enxuto↔Completo remonta o hook e zerava o estado,
+  // permitindo re-adicionar a mesma proposta e acumular cards no Kanban.
+  const [propostasAdicionadasIds, setPropostasAdicionadasIds] = useState<string[]>(() =>
+    OBTER_IDS_PROPOSTAS_NO_KANBAN(resultado.diagnostico.id)
+  );
   const [sinalDeAtualizacaoKanban, setSinalDeAtualizacaoKanban] = useState<number>(0);
   const [feedbackKanban, setFeedbackKanban] = useState<string | null>(null);
   const [hospedandoParaKanban, setHospedandoParaKanban] = useState<boolean>(false);
 
-  const { diagnostico, estrategias, kpisSimulados, alertaPivotagem } = resultado;
+  // Re-sincroniza se o diagnóstico mudar (Novo Filtro) ou após sinal do Kanban.
+  useEffect(() => {
+    setPropostasAdicionadasIds(OBTER_IDS_PROPOSTAS_NO_KANBAN(diagnostico.id));
+  }, [diagnostico.id, sinalDeAtualizacaoKanban]);
 
   // Se o tier mudar (Trocar plano), realinha aba inicial e abas válidas.
   useEffect(() => {
@@ -209,6 +218,13 @@ export function useLogicaResultados({ resultado, tier }: PropriedadesLogicaResul
 
   const aoAdicionarPropostaAoKanban = async (proposta: PropostaCampanha) => {
     setFeedbackKanban(null);
+    // Já no Kanban (ex.: após trocar tier) — upsert no persist + UI sem segundo card
+    if (propostasAdicionadasIds.includes(proposta.id) || OBTER_IDS_PROPOSTAS_NO_KANBAN(diagnostico.id).includes(proposta.id)) {
+      setPropostasAdicionadasIds((prev) => (prev.includes(proposta.id) ? prev : [...prev, proposta.id]));
+      setFeedbackKanban('Esta proposta já está no Kanban.');
+      setAbaAtiva('kanban');
+      return;
+    }
     let midia = (imagemCampanha.imagemUrl || '').trim();
 
     if (/^data:/i.test(midia)) {

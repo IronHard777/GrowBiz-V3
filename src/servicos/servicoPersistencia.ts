@@ -94,9 +94,9 @@ export function SALVAR_RESULTADO_CONSULTORIA_PERSISTENCIA(resultado: ResultadoCo
     campanhas.push(resultado.campanhaMock);
     salvarColecao(CHAVES.CAMPANHAS, campanhas);
 
-    // Gerar evento inicial de calendário baseado na campanha mock
+    // Card inicial estável por diagnóstico (upsert via CRIAR) — evita acumular evt_auto_* a cada save
     CRIAR_EVENTO_CALENDARIO({
-      id: `evt_auto_${Date.now()}`,
+      id: `evt_auto_${resultado.diagnostico.id}`,
       diagnosticoId: resultado.diagnostico.id,
       titulo: resultado.campanhaMock.tituloCampanha,
       dataHorario: new Date(Date.now() + 86400000).toISOString(), // Amanhã, com fuso preservado
@@ -126,8 +126,52 @@ export function OBTER_RESULTADO_CONSULTORIA_PERSISTIDO(): ResultadoCompletoConsu
 // =====================================
 // PERSISTÊNCIA DO CALENDÁRIO DE CONTEÚDO (MÓDULO 3)
 // =====================================
+/** Mantém a última ocorrência de cada id (corrige duplicatas já gravadas antes do upsert). */
+function deduplicarEventosPorId(eventos: EventoCalendarioConteudo[]): EventoCalendarioConteudo[] {
+  const porId = new Map<string, EventoCalendarioConteudo>();
+  for (const evt of eventos) {
+    porId.set(evt.id, evt);
+  }
+  return Array.from(porId.values());
+}
+
+/**
+ * Autos legados usavam evt_auto_${Date.now()} e acumulavam no mesmo diagnóstico.
+ * Mantém só evt_auto_${diagnosticoId} (ou o mais recente se ainda não houver id estável).
+ */
+function consolidarAutoEventosPorDiagnostico(eventos: EventoCalendarioConteudo[]): EventoCalendarioConteudo[] {
+  const autosPorDiag = new Map<string, EventoCalendarioConteudo[]>();
+  const demais: EventoCalendarioConteudo[] = [];
+  for (const evt of eventos) {
+    if (evt.id.startsWith('evt_auto_')) {
+      const lista = autosPorDiag.get(evt.diagnosticoId) || [];
+      lista.push(evt);
+      autosPorDiag.set(evt.diagnosticoId, lista);
+    } else {
+      demais.push(evt);
+    }
+  }
+  for (const [diagnosticoId, autos] of autosPorDiag) {
+    const idEstavel = `evt_auto_${diagnosticoId}`;
+    const estavel = autos.find((a) => a.id === idEstavel);
+    if (estavel) {
+      demais.push(estavel);
+    } else {
+      const ordenados = [...autos].sort(
+        (a, b) => new Date(b.criadoEm || 0).getTime() - new Date(a.criadoEm || 0).getTime()
+      );
+      demais.push(ordenados[0]);
+    }
+  }
+  return demais;
+}
+
 export function OBTER_EVENTOS_CALENDARIO(): EventoCalendarioConteudo[] {
-  const eventos = lerColecao<EventoCalendarioConteudo>(CHAVES.EVENTOS_CALENDARIO);
+  const eventosBrutos = lerColecao<EventoCalendarioConteudo>(CHAVES.EVENTOS_CALENDARIO);
+  const eventos = consolidarAutoEventosPorDiagnostico(deduplicarEventosPorId(eventosBrutos));
+  if (eventos.length !== eventosBrutos.length) {
+    salvarColecao(CHAVES.EVENTOS_CALENDARIO, eventos);
+  }
   if (eventos.length === 0) {
     // Eventos padrão iniciais para demonstração rica
     const eventosPadrao: EventoCalendarioConteudo[] = [
@@ -181,9 +225,16 @@ function sanitizarImagemUrlEvento(url: string | undefined): string | undefined {
   return u;
 }
 
+/** Upsert por id — evita cards duplicados ao re-adicionar proposta após remount (ex.: trocar tier). */
 export function CRIAR_EVENTO_CALENDARIO(evento: EventoCalendarioConteudo): void {
   const eventos = OBTER_EVENTOS_CALENDARIO();
-  eventos.push({ ...evento, imagemUrl: sanitizarImagemUrlEvento(evento.imagemUrl) });
+  const sanitizado = { ...evento, imagemUrl: sanitizarImagemUrlEvento(evento.imagemUrl) };
+  const idx = eventos.findIndex(e => e.id === evento.id);
+  if (idx >= 0) {
+    eventos[idx] = { ...eventos[idx], ...sanitizado };
+  } else {
+    eventos.push(sanitizado);
+  }
   salvarColecao(CHAVES.EVENTOS_CALENDARIO, eventos);
 }
 
@@ -199,4 +250,20 @@ export function ATUALIZAR_EVENTO_CALENDARIO(evento: EventoCalendarioConteudo): v
 export function EXCLUIR_EVENTO_CALENDARIO(id: string): void {
   const eventos = OBTER_EVENTOS_CALENDARIO().filter(e => e.id !== id);
   salvarColecao(CHAVES.EVENTOS_CALENDARIO, eventos);
+}
+
+/** Remove eventos de um diagnóstico (higiene ao iniciar novo fluxo). */
+export function EXCLUIR_EVENTOS_DO_DIAGNOSTICO(diagnosticoId: string): void {
+  const eventos = OBTER_EVENTOS_CALENDARIO().filter(e => e.diagnosticoId !== diagnosticoId);
+  salvarColecao(CHAVES.EVENTOS_CALENDARIO, eventos);
+}
+
+/**
+ * IDs de proposta já no Kanban deste diagnóstico.
+ * Cards de proposta usam id `evt_${proposta.id}` (proposta.id começa com `prop_`).
+ */
+export function OBTER_IDS_PROPOSTAS_NO_KANBAN(diagnosticoId: string): string[] {
+  return OBTER_EVENTOS_CALENDARIO()
+    .filter((e) => e.diagnosticoId === diagnosticoId && e.id.startsWith('evt_prop_'))
+    .map((e) => e.id.slice('evt_'.length));
 }
