@@ -55,6 +55,8 @@ export const ModuloResultadosMocks: React.FC<PropriedadesResultados> = ({ result
     const lista = OBTER_EVENTOS_CALENDARIO().filter((e) => e.diagnosticoId === diagnostico.id);
     let mudou = false;
     for (const evt of lista) {
+      // Reels precisa de video - nao sincronizar imagem HTTPS da campanha
+      if (evt.canal === 'Instagram Reels') continue;
       const atual = (evt.imagemUrl || '').trim();
       if (atual === url) continue;
       const precisaTrocar =

@@ -66,12 +66,21 @@ const PROXIMO_STATUS: Record<StatusEventoCalendario, StatusEventoCalendario | nu
   publicado: null
 };
 
+/** HTTPS real no card (nao estoque) - habilita Publicar; nao exige extensao de arquivo. */
+function URL_HTTPS_VALIDA_PARA_PUBLICAR(imagemUrl?: string | null): boolean {
+  const u = (imagemUrl || '').trim();
+  if (!u || !/^https:\/\//i.test(u)) return false;
+  if (/unsplash|picsum|placehold/i.test(u)) return false;
+  return true;
+}
+
 export const CalendarioConteudo: React.FC<PropriedadesCalendario> = ({ diagnosticoId, sinalDeAtualizacao, midiaMockUrl }) => {
   const [eventos, setEventos] = useState<EventoCalendarioConteudo[]>([]);
   const [sessaoIg, setSessaoIg] = useState<SessaoInstagram | null>(() => OBTER_SESSAO_INSTAGRAM());
   const [metaConfigurado, setMetaConfigurado] = useState<boolean>(false);
   const [publicandoId, setPublicandoId] = useState<string | null>(null);
   const [msgIg, setMsgIg] = useState<string | null>(null);
+  const [erroCardIg, setErroCardIg] = useState<{ id: string; msg: string } | null>(null);
   const [modalAberto, setModalAberto] = useState<boolean>(false);
   const [eventoParaEditar, setEventoParaEditar] = useState<EventoCalendarioConteudo | null>(null);
 
@@ -111,6 +120,8 @@ export const CalendarioConteudo: React.FC<PropriedadesCalendario> = ({ diagnosti
     const lista = OBTER_EVENTOS_CALENDARIO().filter((e) => e.diagnosticoId === diagnosticoId);
     let mudou = false;
     for (const evt of lista) {
+      // Reels precisa de video - nao sincronizar imagem HTTPS dos Mocks
+      if (evt.canal === 'Instagram Reels') continue;
       const atual = (evt.imagemUrl || '').trim();
       if (atual === mock) continue;
       // Atualiza se ausente, estoque, ou data: residual
@@ -228,27 +239,38 @@ useEffect(() => {
 
   const publicarNoInstagram = async (evt: EventoCalendarioConteudo) => {
     setMsgIg(null);
-    if (!CANAL_INSTAGRAM(evt.canal)) return;
-    const mediaType = TIPO_MIDIA_DO_CANAL(evt.canal);
-    const mediaUrl = (evt.imagemUrl || '').trim();
+    setErroCardIg(null);
+    const fresco = OBTER_EVENTOS_CALENDARIO().find(e => e.id === evt.id) || evt;
+    if (!CANAL_INSTAGRAM(fresco.canal)) return;
+    const mediaType = TIPO_MIDIA_DO_CANAL(fresco.canal);
+    const mediaUrl = (fresco.imagemUrl || '').trim();
     const validacao = VALIDAR_MIDIA_PARA_INSTAGRAM(mediaUrl, mediaType, midiaMockUrl);
     if (validacao.ok === false) {
       setMsgIg(validacao.erro);
+      setErroCardIg({ id: fresco.id, msg: validacao.erro });
+      requestAnimationFrame(() => {
+        document.querySelector(`[data-gb-evt="${fresco.id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
       return;
     }
-    setPublicandoId(evt.id);
-    setMsgIg(mediaType === 'REELS' ? 'Publicando Reel… isso pode levar 1–2 min.' : 'Publicando no Instagram…');
+    if (!OBTER_SESSAO_INSTAGRAM()) {
+      const msg = 'Conecte o Instagram antes de publicar (botão Conectar Instagram no topo).';
+      setMsgIg(msg);
+      setErroCardIg({ id: fresco.id, msg });
+      requestAnimationFrame(() => {
+        document.querySelector(`[data-gb-evt="${fresco.id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+      return;
+    }
+    setPublicandoId(fresco.id);
+    setMsgIg(mediaType === 'REELS' ? 'Publicando Reel. isso pode levar 1-2 min.' : 'Publicando no Instagram.');
     try {
-      if (!OBTER_SESSAO_INSTAGRAM()) {
-        const sessao = await CONECTAR_INSTAGRAM_OAUTH();
-        setSessaoIg(sessao);
-      }
-      const hashtagTxt = (evt.hashtags || []).map(h => (h.startsWith('#') ? h : '#' + h)).join(' ');
-      const caption = [evt.copy, hashtagTxt].filter(Boolean).join('\n\n');
-      setMsgIg('Preparando midia dos Mocks para a Meta…');
+      const hashtagTxt = (fresco.hashtags || []).map(h => (h.startsWith('#') ? h : '#' + h)).join(' ');
+      const caption = [fresco.copy, hashtagTxt].filter(Boolean).join('\n\n');
+      setMsgIg('Preparando midia dos Mocks para a Meta.');
       const urlPublica = await RESOLVER_URL_PUBLICA_MIDIA(mediaUrl, midiaMockUrl);
       if (urlPublica !== mediaUrl) {
-        ATUALIZAR_EVENTO_CALENDARIO({ ...evt, imagemUrl: urlPublica });
+        ATUALIZAR_EVENTO_CALENDARIO({ ...fresco, imagemUrl: urlPublica });
       }
       await PUBLICAR_NO_INSTAGRAM({
         caption,
@@ -257,11 +279,14 @@ useEffect(() => {
         onProgress: (msg) => setMsgIg(msg)
       });
       // Inclui imagemUrl: urlPublica para nao apagar o HTTPS gravado acima
-      ATUALIZAR_EVENTO_CALENDARIO({ ...evt, imagemUrl: urlPublica, status: 'publicado' });
+      ATUALIZAR_EVENTO_CALENDARIO({ ...fresco, imagemUrl: urlPublica, status: 'publicado' });
       recarregarEventos();
+      setErroCardIg(null);
       setMsgIg('Publicado no Instagram com sucesso.');
     } catch (e) {
-      setMsgIg(e instanceof Error ? e.message : 'Falha ao publicar no Instagram.');
+      const msg = e instanceof Error ? e.message : 'Falha ao publicar no Instagram.';
+      setMsgIg(msg);
+      setErroCardIg({ id: fresco.id, msg });
     } finally {
       setPublicandoId(null);
     }
@@ -369,7 +394,7 @@ useEffect(() => {
                   const proximo = PROXIMO_STATUS[evt.status];
 
                   return (
-                    <div key={evt.id} className={`gb-card p-4 border-t-2 ${evt.status === 'publicado' ? 'border-t-emerald-400' : new Date(evt.dataHorario) < new Date() ? 'border-t-amber-400' : 'border-t-blue-400'}`}>
+                    <div key={evt.id} data-gb-evt={evt.id} className={`gb-card p-4 border-t-2 ${evt.status === 'publicado' ? 'border-t-emerald-400' : new Date(evt.dataHorario) < new Date() ? 'border-t-amber-400' : 'border-t-blue-400'}`}>
                       <div className="flex items-center justify-between gap-2 mb-2">
                         <span className="gb-badge-plat flex items-center gap-1">
                           {evt.canal.includes('Reels') || evt.canal.includes('TikTok') ? (
@@ -392,15 +417,26 @@ useEffect(() => {
                       <button type="button" onClick={() => baixarLembrete(evt)} className="text-xs text-blue-300 underline mb-3 mr-4">Lembrete</button>
                       <a href={DESTINOS[evt.canal]} target="_blank" rel="noopener noreferrer" className="text-blue-300 text-xs underline block mb-3">Abrir {evt.canal} ↗</a>
                       {CANAL_INSTAGRAM(evt.canal) && evt.status !== 'publicado' && (
-                        <button
-                          type="button"
-                          onClick={() => publicarNoInstagram(evt)}
-                          disabled={publicandoId === evt.id}
-                          className="mb-3 w-full flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white text-[11px] font-mono font-bold uppercase tracking-wider disabled:opacity-50"
-                        >
-                          <Instagram className="w-3.5 h-3.5" />
-                          <span>{publicandoId === evt.id ? 'Publicando...' : 'Publicar no Instagram'}</span>
-                        </button>
+                        <>
+                          {!URL_HTTPS_VALIDA_PARA_PUBLICAR(evt.imagemUrl) && (
+                            <span className="mb-2 inline-block text-[10px] font-mono uppercase tracking-wider text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded px-1.5 py-0.5">
+                              sem mídia
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => publicarNoInstagram(evt)}
+                            disabled={publicandoId === evt.id || !URL_HTTPS_VALIDA_PARA_PUBLICAR(evt.imagemUrl)}
+                            title={!URL_HTTPS_VALIDA_PARA_PUBLICAR(evt.imagemUrl) ? 'Adicione uma URL HTTPS de midia no card (editar) ou gere midia nos Mocks de Conteudo.' : undefined}
+                            className="mb-3 w-full flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white text-[11px] font-mono font-bold uppercase tracking-wider disabled:opacity-50"
+                          >
+                            <Instagram className="w-3.5 h-3.5" />
+                            <span>{publicandoId === evt.id ? 'Publicando...' : 'Publicar no Instagram'}</span>
+                          </button>
+                          {erroCardIg?.id === evt.id && (
+                            <p className="mb-3 text-[11px] font-mono text-amber-300 leading-relaxed">{erroCardIg.msg}</p>
+                          )}
+                        </>
                       )}
                       <div className="flex items-center justify-between pt-3 border-t border-white/10">
                         <div className="flex items-center gap-1.5">
